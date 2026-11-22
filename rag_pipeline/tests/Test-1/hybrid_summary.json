@@ -1,0 +1,28 @@
+{
+  "mode": "hybrid",
+  "n_samples": 50,
+  "ragas_metrics": {
+    "context_precision": 0.4299,
+    "context_recall": 0.608,
+    "faithfulness": 0.2115,
+    "answer_relevancy": 0.6658
+  },
+  "triage_accuracy_analysis": {
+    "overall_triage_accuracy": 0.8,
+    "total_correct_triages": 40,
+    "total_test_samples": 50,
+    "mean_retrieval_team_relevance": 0.53,
+    "triage_accuracy_by_group": {
+      "Network Ops": {
+        "total_cases": 25,
+        "correct_triages": 20,
+        "accuracy": 0.8
+      },
+      "IT Support": {
+        "total_cases": 25,
+        "correct_triages": 20,
+        "accuracy": 0.8
+      }
+    }
+  }
+}

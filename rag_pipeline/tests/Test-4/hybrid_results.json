@@ -1,0 +1,320 @@
+[
+  {
+    "index": 0,
+    "number": "TEST_INC001",
+    "query": "BGP Route Flapping Causing Intermittent Packet Drops on Secondary WAN Link. Network monitoring alerted on frequent BGP state changes (Established to Active/Idle) on edge router rtr-core-dc2 connecting to ISP-2. Traffic across the secondary WAN circuit is dropping 28% of packets every 6-8 minutes, causing latency spikes in inter-DC replication.. BGP route flapping WAN packet loss MTU hold timer edge router replication latency",
+    "ground_truth": "The root cause was aggressive BGP hold-timer mismatch and MTU black-holing on the secondary ISP link. The issue was resolved by aligning the BGP keepalive/hold timers to 30s/90s on rtr-core-dc2, configuring path MTU discovery, and clamping TCP MSS to 1400 on the transit interface.",
+    "ground_truth_team": "Network Ops",
+    "ground_truth_category": "Network",
+    "retrieved_context_ids": [
+      "INC00503",
+      "INC00501",
+      "INC00510",
+      "INC00502",
+      "INC00543"
+    ],
+    "retrieved_contexts": [
+      "BGP route flapping mitigated by route flap dampening configuration. Continuous BGP update floods from an upstream transit provider caused routing table churn across core switches, leading to transient packet drops and degraded inter-site replication performance.. Keywords: bgp, route flap dampening, routing table churn, flap-statistics, prefix suppression, transit\nAffected Component: Core Switch\nResolution: Review of 'show ip bgp dampening flap-statistics' identified that prefix 198.18.0.0/15 flapped 42 times within 20 minutes due to an unstable upstream fiber link. The engineer implemented BGP Route Flap Dampening with half-life of 15 minutes, suppress threshold of 2000, and reuse threshold of 750. The flapping routes were suppressed, stabilizing the routing tables and restoring normal replication throughput.",
+      "BGP session reset due to keepalive and hold timer mismatch. Network operations center observed cyclic BGP state transitions between Established and Idle on border router rtr-gw-01 connecting to ISP-A. WAN traffic failovers were causing latency spikes and packet loss for cloud application traffic.. Keywords: bgp, hold-timer, keepalive, border router, route flapping, peering reset, wan\nAffected Component: Edge Router\nResolution: Diagnostics via 'show ip bgp summary' and 'show log | include BGP' revealed that the BGP hold timer was expiring repeatedly. Investigation confirmed that the ISP had reconfigured their peer timers to 10s keepalive / 30s hold, while rtr-gw-01 was configured with default 30s/90s timers. The issue was resolved by negotiating matching timers via 'neighbor 198.51.100.1 timers 10 30' and applying BGP route dampening. Post-change telemetry over 2 hours confirmed zero peering resets and stable latency across the transit link.",
+      "BFD aggressive timer sensitivity triggering premature BGP session resets. Inter-datacenter backbone links experienced frequent BGP session flaps every 5 to 10 minutes during backup replication bursts, degrading application sync.. Keywords: bfd, bgp flap, timer tuning, qos, micro-burst, backbone link, dscp\nAffected Component: Core Router\nResolution: Log analysis showed Bidirectional Forwarding Detection (BFD) tearing down BGP peering because transit interface micro-bursts delayed BFD control packets past the 150ms multiplier threshold. The engineer tuned BFD timers on the interface from 'bfd interval 50 min_rx 50 multiplier 3' to 'interval 250 min_rx 250 multiplier 3' and assigned BFD packets to high-priority QoS queue (DSCP CS6). Peering stability was restored with 0 drops under load.",
+      "MTU black-holing on secondary WAN circuit causing large packet drops. Branch offices connected across the secondary WAN link reported intermittent SSH and HTTPS connection freezes, while basic ICMP pings succeeded. Traffic monitoring showed 15% packet loss on packets larger than 1400 bytes.. Keywords: mtu black hole, tcp mss, packet loss, wan circuit, pmtud, fragmentation, interface\nAffected Component: WAN Circuit\nResolution: The network team ran 'ping -s 1472 -M do 10.200.1.1' which failed, pinpointing an MTU black-hole where transit routers silently dropped packets exceeding path MTU without sending ICMP Fragmentation Needed packets. The engineer applied TCP MSS clamping via 'ip tcp adjust-mss 1360' on the transit interface and enabled Path MTU Discovery. Retesting confirmed 100% transmission for 1500-byte packets and resolved application session stalling.",
+      "Route-based IPsec tunnel dropping traffic due to BGP hold-time expiration. Route-based IPsec VPN between on-premises datacenter and Azure Virtual Network Gateway flapped intermittently, disrupting hybrid active directory sync.. Keywords: azure vpn, route-based vpn, apipa, bgp timers, jitter, virtual network gateway\nAffected Component: Firewall Gateway\nResolution: Diagnostics showed the IPsec tunnel was stable, but BGP peering over the APIPA tunnel interface (169.254.21.1) was resetting. High WAN jitter caused BGP keepalive packets to be delayed past the 30-second hold timer. The engineer tuned BGP timers on the local route-based gateway to match Azure's recommended 60-second hold-timer ('neighbor 169.254.21.2 timers 20 60') and prioritized BGP traffic on the tunnel interface. BGP peering stabilized with zero drops."
+    ],
+    "retrieved_teams": [
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "Network Ops"
+    ],
+    "generated_answer": "Root Cause: BGP route flapping caused by upstream link instability (INC00503) and BGP hold timer mismatches (INC00501, INC00543) leading to session resets and packet loss on secondary WAN circuits.\nResolution: 1. Verify BGP timers on rtr-core-dc2 using 'show ip bgp summary' to confirm hold/keepalive intervals match ISP-2 configurations. 2. Apply 'neighbor <ISP_IP> timers <keepalive> <hold>' to align with ISP's 10/30s or 20/60s settings. 3. Enable BGP route flap dampening with 'bgp dampening' and configure thresholds (half-life 15m, suppress 2000, reuse 750). 4. Check BFD timers on the WAN interface using 'show bfd interface' and adjust interval/min_rx/multiplier if micro-bursts are detected. 5. Validate MTU settings with 'ping -s 1472 -M do <remote_IP>' and apply 'ip tcp adjust-mss 1360' if MTU black-holing is confirmed.",
+    "ragas_scores": {
+      "context_precision": 0.6791666666496875,
+      "context_recall": 1.0,
+      "faithfulness": 0.5714285714285714,
+      "answer_relevancy": 0.8032396602587354
+    },
+    "triage_evaluation": {
+      "ground_truth_team": "Network Ops",
+      "predicted_team": "Network Ops",
+      "normalized_ground_truth_team": "Network Ops",
+      "normalized_predicted_team": "Network Ops",
+      "triage_match": true,
+      "predicted_priority": "2 - High",
+      "routing_justification": "BGP flapping and associated packet loss require network infrastructure expertise and immediate stabilization of routing protocols",
+      "retrieved_teams": [
+        "Network Ops",
+        "Network Ops",
+        "Network Ops",
+        "Network Ops",
+        "Network Ops"
+      ],
+      "retrieval_team_relevance_rate": 1.0
+    }
+  },
+  {
+    "index": 1,
+    "number": "TEST_INC002",
+    "query": "Cannot access internal inventory portal from branch office. Staff at the Seattle branch office report that the internal inventory management tool is not loading at all today. Browser says connection timed out. Other websites like Google work fine.. IPsec VPN branch office inventory portal timeout IKEv2 Security Association tunnel",
+    "ground_truth": "The root cause was an expired IPsec phase-2 Security Association (SA) lifetime configuration on the Seattle branch gateway router, preventing renegotiation with the central VPN concentrator. Resolved by clearing stale SAs with 'clear crypto ipsec sa', updating the IKEv2 proposal lifetimes to match the central profile, and verifying tunnel stability.",
+    "ground_truth_team": "Network Ops",
+    "ground_truth_category": "Network",
+    "retrieved_context_ids": [
+      "INC00542",
+      "INC00526",
+      "INC00544",
+      "INC00530",
+      "INC00534"
+    ],
+    "retrieved_contexts": [
+      "Site-to-site IPsec tunnel down due to expired machine authentication cert. Production IPsec tunnel between Atlanta and Frankfurt datacenters failed at midnight, severing database replication across European and US regions.. Keywords: machine certificate, certificate expired, ikev2 signature, pki, x.509, ipsec tunnel\nAffected Component: IPsec Tunnel\nResolution: Gateway logs via 'show log vpn' displayed 'IKEv2 signature authentication failed: certificate expired'. The X.509 machine certificate installed on the Atlanta gateway had expired. The engineer enrolled and downloaded an updated certificate from the enterprise PKI, imported it into the router key-store ('crypto pki import ATLANTA-CERT pem'), and bound it to the IKEv2 trust profile. The tunnel re-authenticated and resumed full database replication within minutes.",
+      "IPsec Phase 2 SA lifetime mismatch causing hourly tunnel drop. Branch office in Austin experienced dropouts on their site-to-site IPsec tunnel to the primary data center exactly once every 60 minutes, disrupting ongoing VoIP calls and active database sessions.. Keywords: ipsec sa, phase 2 lifetime, tunnel teardown, vpn concentrator, rekey proposal, security association\nAffected Component: IPsec Tunnel\nResolution: Diagnostics using 'show crypto ipsec sa' on gateway rtr-aus-gw revealed that Phase 2 Security Associations (SA) were renegotiated every 3600 seconds on the branch, whereas the central VPN concentrator enforced a lifetime of 28800 seconds without accepting branch rekey proposals. The engineer synchronized the IPsec transform proposal lifetime to 28800 seconds via 'set security ipsec proposal IPSEC-PROP lifetime-seconds 28800' and cleared stale SAs. Continuous ping monitoring over 4 hours confirmed continuous uptime without hourly renegotiation drops.",
+      "SSL-VPN portal connection timeout caused by RADIUS MFA push delay. Remote users logging into the SSL-VPN portal were repeatedly rejected with 'Authentication timeout', even though users approved push notifications on their phones.. Keywords: ssl-vpn, radius timeout, mfa push, duo security, authentication timeout, vpn concentrator\nAffected Component: VPN Concentrator\nResolution: Investigation revealed that the SSL-VPN gateway had a RADIUS server response timeout of 10 seconds. When users took 12 to 15 seconds to approve the mobile Duo MFA push notification, the gateway timed out the request before the RADIUS server returned 'Access-Accept'. The engineer adjusted the RADIUS authentication timeout on the gateway from 10 to 60 seconds ('set authentication radius-server timeout 60'). Subsequent MFA authentications completed reliably.",
+      "IPsec proxy-ID encryption domain mismatch dropping subnet traffic. Staff in the Phoenix office could ping data center web servers over the IPsec VPN, but all traffic destined for the newly deployed analytics subnet (10.240.50.0/24) timed out.. Keywords: proxy-id, encryption domain, traffic selector, policy-based vpn, phase 2 sa, subnet drop\nAffected Component: IPsec Tunnel\nResolution: Diagnostics via 'show crypto ipsec sa' revealed that the active Phase 2 Security Association only defined Proxy-ID for 10.200.0.0/16, causing traffic for 10.240.50.0/24 to be dropped unencrypted. The engineer updated the local traffic selector on the policy-based VPN to include the 10.240.50.0/24 CIDR block on both endpoints. Following a quick SA re-initiation via 'clear crypto sa peer 203.0.113.10', bidirectionally routed traffic to the analytics cluster succeeded with 0% packet loss.",
+      "Dynamic VTI IPsec session exhaustion caused by stale zombie client sessions. Remote branch offices were unable to establish dynamic IPsec tunnels to the corporate hub, receiving 'Resource temporarily unavailable' error messages.. Keywords: vti, session exhaustion, zombie sessions, crypto session-limit, ike delete, tunnel limit\nAffected Component: VPN Concentrator\nResolution: Diagnostics via 'show crypto session summary' indicated 2048 active sessions, reaching the hardware platform's licensed limit. Review of the session table revealed hundreds of orphaned sessions from laptops that disconnected ungracefully without sending IKE Delete payloads. The engineer reduced the DPD idle timeout to 30 seconds, enabled aggressive session cleanup ('crypto session-limit timeout 60'), and cleared hung sessions. Free tunnel slots increased to 1,200, allowing branch tunnels to reconnect."
+    ],
+    "retrieved_teams": [
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "Network Ops"
+    ],
+    "generated_answer": "Root Cause: INC00530 (IPsec proxy-ID encryption domain mismatch dropping subnet traffic) and INC00542 (expired machine authentication cert causing IKEv2 tunnel failure). The inventory portal's subnet likely isn't included in the IPsec traffic selectors, and/or the IKEv2 SA may have failed due to certificate expiration, both causing encrypted tunnel connectivity issues for internal resources.\nResolution: 1. Verify IPsec Phase 2 traffic selectors via 'show crypto ipsec sa' to confirm the inventory portal's subnet (e.g., 10.x.x.x/24) is included in both endpoints' policy. 2. If missing, update the local traffic selector on the Seattle branch gateway using 'crypto ipsec transform-set INVENTORY-SET match address 10.240.50.0 255.255.255.0' and re-initiate SA with 'clear crypto sa peer <remote_ip>'. 3. Check IKEv2 certificate validity via 'show crypto ikev2 sa' and renew expired certificates using 'crypto pki import <cert_name> pem' if needed.",
+    "ragas_scores": {
+      "context_precision": 0.8874999999778125,
+      "context_recall": 1.0,
+      "faithfulness": 0.6923076923076923,
+      "answer_relevancy": 0.6159101608419765
+    },
+    "triage_evaluation": {
+      "ground_truth_team": "Network Ops",
+      "predicted_team": "Network Ops",
+      "normalized_ground_truth_team": "Network Ops",
+      "normalized_predicted_team": "Network Ops",
+      "triage_match": true,
+      "predicted_priority": "2 - High",
+      "routing_justification": "The issue involves IPsec tunnel configuration affecting internal resource access, requiring network infrastructure expertise",
+      "retrieved_teams": [
+        "Network Ops",
+        "Network Ops",
+        "Network Ops",
+        "Network Ops",
+        "Network Ops"
+      ],
+      "retrieval_team_relevance_rate": 1.0
+    }
+  },
+  {
+    "index": 2,
+    "number": "TEST_INC003",
+    "query": "Internal DNS Resolution Failure for Payment Gateway Microservices. Payment processing pods in Kubernetes cluster prod-east are throwing 'EAI_AGAIN' and NXDOMAIN errors when resolving internal service endpoint payment-gateway.internal.corp. Direct IP pings to the pods succeed, but host lookups fail intermittently.. CoreDNS DNS resolution NXDOMAIN EAI_AGAIN Kubernetes Payment Gateway UDP buffer",
+    "ground_truth": "The root cause was CoreDNS upstream forwarder rate-limiting due to UDP port exhaustion on the primary internal resolver node. Resolved by auto-scaling CoreDNS replicas, configuring CoreDNS cache plugin with a 30-second TTL minimum, and directing upstream queries to redundant internal DNS servers.",
+    "ground_truth_team": "Network Ops",
+    "ground_truth_category": "Network",
+    "retrieved_context_ids": [
+      "INC00771",
+      "INC00601",
+      "INC00602",
+      "INC00617",
+      "INC00546"
+    ],
+    "retrieved_contexts": [
+      "CoreDNS upstream UDP port exhaustion causing intermittent DNS resolution timeout for microservices. Payment processing pods in Kubernetes namespace payments reported intermittent DNS lookup timeouts and NXDOMAIN errors when querying external API endpoints such as api.stripe.com. Pod logs displayed dial tcp lookup api.stripe.com i/o timeout while internal cluster DNS remained partially functional.. Keywords: coredns, udp port exhaustion, dns timeout, kubernetes, cache plugin, upstream forwarder, nxdomain, microservices\nAffected Component: CoreDNS\nResolution: Diagnostics on CoreDNS metrics showed heavy UDP port allocation on the node's local resolver socket, causing CoreDNS upstream forwarder rate-limiting due to UDP port exhaustion on the primary internal resolver node. The engineer auto-scaled CoreDNS replicas from 2 to 6, configured the CoreDNS cache plugin with a 30-second TTL minimum in the Corefile, and directed upstream queries to redundant internal enterprise DNS servers. DNS query latency normalized to <2ms with zero timeouts.",
+      "CoreDNS crash-looping in Kubernetes cluster due to recursive query loop. Production Kubernetes cluster prod-east-01 experienced widespread DNS resolution failures across all microservice pods, halting payment processing and order ingestion.. Keywords: coredns, kubernetes, dns loop, kube-dns, resolv.conf, crashloopbackoff, microservice dns\nAffected Component: CoreDNS\nResolution: Inspecting pod logs via 'kubectl logs -n kube-system -l k8s-app=kube-dns' revealed fatal error 'plugin/loop: Loop (127.0.0.1:53 -> :53) detected'. A recent node resolv.conf update pointed upstream nameservers to local host IP (127.0.0.53), causing CoreDNS forwarding rules to recursively loop back onto itself until container memory exhausted. The engineer corrected the CoreDNS ConfigMap upstream forward block ('forward . 10.0.0.53 10.0.0.54') and restarted the CoreDNS deployment. Internal DNS queries resolved within 2ms, restoring cluster service communication.",
+      "Split-brain DNS zone transfer desync breaking payment gateway routing. Payment microservices reported intermittent host unreachable errors when calling internal gateway endpoint 'paygate.corp.internal', failing 50% of credit card transactions.. Keywords: split-brain dns, bind, zone transfer, axfr, tsig key, rndc, payment gateway\nAffected Component: Internal DNS\nResolution: Executing 'dig @ns1.corp.internal paygate.corp.internal' returned active IP 10.20.4.50, but query against secondary server 'dig @ns2.corp.internal' returned obsolete decommissioned IP 10.20.4.12. Review of BIND logs identified AXFR zone transfer failure code 'REFUSED' due to an expired TSIG key on ns2. The engineer synchronized the HMAC-SHA256 TSIG secret across both nameservers and executed 'rndc retransfer corp.internal' on ns2. The zone updated to serial 2024030701, restoring consistent DNS responses across both resolvers.",
+      "DNS negative caching storing NXDOMAIN responses for newly provisioned hosts. Developers deploying new microservice 'billing-api.corp.internal' could not resolve the hostname for 2 hours after adding the DNS record, while public DNS worked.. Keywords: negative caching, nxdomain, soa minimum ttl, dns cache flush, rndc flush, internal dns\nAffected Component: Internal DNS\nResolution: Diagnostics showed developers had queried the hostname before the DNS record was created, causing recursive resolvers to cache the NXDOMAIN (Non-Existent Domain) negative response. The SOA record had an excessive Negative Caching TTL (MINIMUM field) set to 7200 seconds (2 hours). The engineer cleared the resolver cache via 'rndc flushname billing-api.corp.internal' and reduced the SOA negative caching TTL to 300 seconds. Resolvers queried the authoritative source and returned the correct IP immediately.",
+      "Remote access VPN split-DNS failure preventing internal hostname resolution. Employees connected to the remote access VPN could access internal servers by IP address, but internal domain queries like 'gitlab.corp.internal' failed to resolve.. Keywords: split-dns, hostname resolution, scutil, internal domain, vpn client profile, dns servers\nAffected Component: GlobalProtect Gateway\nResolution: Diagnostics on client machines using 'scutil --dns' (macOS) and 'Resolve-DnsName' (Windows) showed that DNS requests for '.corp.internal' were being sent to public home Wi-Fi routers instead of corporate DNS. The VPN gateway split-DNS configuration was missing the internal DNS search domains. The engineer added 'corp.internal' and internal DNS server IPs (10.0.0.53, 10.0.0.54) to the gateway client network profile. Reconnecting clients resolved internal hostnames immediately."
+    ],
+    "retrieved_teams": [
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "Network Ops"
+    ],
+    "generated_answer": "Root Cause: Negative caching of NXDOMAIN responses due to excessive SOA record MINIMUM TTL (7200 seconds) as seen in Incident 4 (INC00617). The resolver cached the NXDOMAIN response for payment-gateway.internal.corp until the TTL expired, causing intermittent resolution failures despite correct DNS records.\nResolution: 1. Clear resolver cache for payment-gateway.internal.corp using 'rndc flushname payment-gateway.internal.corp' 2. Reduce SOA record MINIMUM TTL to 300 seconds in the DNS zone configuration 3. Verify DNS record propagation with 'dig @ns1.corp.internal payment-gateway.internal.corp' and 'dig @ns2.corp.internal payment-gateway.internal.corp' 4. Monitor DNS query latency with 'dig +stats @ns1.corp.internal payment-gateway.internal.corp'",
+    "ragas_scores": {
+      "context_precision": 0.999999999975,
+      "context_recall": 1.0,
+      "faithfulness": 0.18181818181818182,
+      "answer_relevancy": 0.6395453658722846
+    },
+    "triage_evaluation": {
+      "ground_truth_team": "Network Ops",
+      "predicted_team": "Network Ops",
+      "normalized_ground_truth_team": "Network Ops",
+      "normalized_predicted_team": "Network Ops",
+      "triage_match": true,
+      "predicted_priority": "2 - High",
+      "routing_justification": "DNS resolution failure impacting payment processing microservices requires Network Ops expertise to address CoreDNS configuration and DNS propagation issues",
+      "retrieved_teams": [
+        "Network Ops",
+        "Network Ops",
+        "Network Ops",
+        "Network Ops",
+        "Network Ops"
+      ],
+      "retrieval_team_relevance_rate": 1.0
+    }
+  },
+  {
+    "index": 3,
+    "number": "TEST_INC004",
+    "query": "VPN disconnecting every 15 minutes. Remote employees connecting through GlobalProtect VPN get forcibly disconnected every 15 to 20 minutes and have to re-authenticate repeatedly.. GlobalProtect VPN disconnect Palo Alto Dead Peer Detection DPD session timeout remote access",
+    "ground_truth": "The root cause was an idle-timeout policy collision in the GlobalProtect gateway profile combined with an aggressive Dead Peer Detection (DPD) interval. Resolved by setting the GlobalProtect session timeout to 8 hours, increasing the DPD timeout to 60 seconds on the firewall, and deploying updated configs.",
+    "ground_truth_team": "Network Ops",
+    "ground_truth_category": "Network",
+    "retrieved_context_ids": [
+      "INC00758",
+      "INC00527",
+      "INC00537",
+      "INC00534",
+      "INC00546"
+    ],
+    "retrieved_contexts": [
+      "GlobalProtect VPN session termination every 15 minutes due to DPD timeout. Remote engineering staff connecting to the corporate network via Palo Alto GlobalProtect VPN reported consistent disconnections every 15 minutes, interrupting database administration and remote SSH sessions.. Keywords: globalprotect, vpn disconnect, dpd, dead peer detection, palo alto, session timeout, keepalive, firewall, remote access\nAffected Component: VPN Concentrator\nResolution: Diagnostics on Palo Alto Firewall GlobalProtect gateway logs showed that aggressive Dead Peer Detection (DPD) with a 60-second timeout was terminating tunnels whenever home internet latency spikes delayed 3 consecutive keepalives. The engineer adjusted the gateway DPD hello interval to 30s / retry 5, relaxed the inactivity disconnect timeout, and pushed an updated client configuration. Remote connections remained stable across home broadband variations.",
+      "GlobalProtect VPN client disconnects due to DPD and idle timeout collision. Remote software engineers connecting via GlobalProtect VPN reported sudden disconnections every 15 minutes during active code reviews, followed by 30-second reconnection delays.. Keywords: globalprotect, dpd timeout, dead peer detection, vpn disconnect, idle timeout, palo alto firewall\nAffected Component: GlobalProtect Gateway\nResolution: Firewall logs on the Palo Alto gateway showed session terminations tagged as 'DPD timeout'. Investigation identified that the gateway's Dead Peer Detection (DPD) was set to an aggressive 10-second interval with 3 retries, colliding with an intermediate cloud NAT proxy that coalesced UDP keepalives. The engineer increased the DPD interval to 60 seconds, extended the client idle timeout from 15 minutes to 8 hours, and pushed the updated client profile. Remote disconnections dropped to zero across all regional endpoints.",
+      "GlobalProtect client IP pool exhaustion preventing remote logins. During an all-company remote work drill, over 200 employees reported error 'Virtual adapter setup failed' when attempting to connect to the GlobalProtect VPN.. Keywords: globalprotect, ip pool exhaustion, virtual adapter, client configuration, palo alto, remote workers\nAffected Component: GlobalProtect Gateway\nResolution: Checking the GlobalProtect gateway pool status revealed 100% allocation of the assigned /22 DHCP IP pool (10.120.0.0/22 - 1,022 addresses). The engineer expanded the virtual IP assignment pool by adding an adjacent /21 subnet block (10.120.8.0/21) under Network > GlobalProtect > Gateways > Client Configuration > Network Settings. The configuration was committed, and queued remote users connected immediately with valid IP addresses.",
+      "Dynamic VTI IPsec session exhaustion caused by stale zombie client sessions. Remote branch offices were unable to establish dynamic IPsec tunnels to the corporate hub, receiving 'Resource temporarily unavailable' error messages.. Keywords: vti, session exhaustion, zombie sessions, crypto session-limit, ike delete, tunnel limit\nAffected Component: VPN Concentrator\nResolution: Diagnostics via 'show crypto session summary' indicated 2048 active sessions, reaching the hardware platform's licensed limit. Review of the session table revealed hundreds of orphaned sessions from laptops that disconnected ungracefully without sending IKE Delete payloads. The engineer reduced the DPD idle timeout to 30 seconds, enabled aggressive session cleanup ('crypto session-limit timeout 60'), and cleared hung sessions. Free tunnel slots increased to 1,200, allowing branch tunnels to reconnect.",
+      "Remote access VPN split-DNS failure preventing internal hostname resolution. Employees connected to the remote access VPN could access internal servers by IP address, but internal domain queries like 'gitlab.corp.internal' failed to resolve.. Keywords: split-dns, hostname resolution, scutil, internal domain, vpn client profile, dns servers\nAffected Component: GlobalProtect Gateway\nResolution: Diagnostics on client machines using 'scutil --dns' (macOS) and 'Resolve-DnsName' (Windows) showed that DNS requests for '.corp.internal' were being sent to public home Wi-Fi routers instead of corporate DNS. The VPN gateway split-DNS configuration was missing the internal DNS search domains. The engineer added 'corp.internal' and internal DNS server IPs (10.0.0.53, 10.0.0.54) to the gateway client network profile. Reconnecting clients resolved internal hostnames immediately."
+    ],
+    "retrieved_teams": [
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "Network Ops"
+    ],
+    "generated_answer": "Root Cause: INC00758 (aggressive DPD 60s timeout colliding with home internet latency) and INC00527 (DPD 10s interval collision with cloud NAT proxy) both show DPD timeout misconfiguration causing 15-minute session termination.  \nResolution: Adjust Palo Alto GlobalProtect gateway DPD hello interval to 30s / retry 5 (from INC00758), increase idle timeout to 8 hours (from INC00527), and ensure no intermediate NAT devices are coalescing UDP keepalives. Push updated client configuration.",
+    "ragas_scores": {
+      "context_precision": 0.8874999999778125,
+      "context_recall": 1.0,
+      "faithfulness": 0.2857142857142857,
+      "answer_relevancy": 0.6188353354054658
+    },
+    "triage_evaluation": {
+      "ground_truth_team": "Network Ops",
+      "predicted_team": "Network Ops",
+      "normalized_ground_truth_team": "Network Ops",
+      "normalized_predicted_team": "Network Ops",
+      "triage_match": true,
+      "predicted_priority": "2 - High",
+      "routing_justification": "VPN connectivity disruptions with 15-minute periodic disconnections align with DPD timeout issues resolved by Network Ops in INC00758 and INC00527.",
+      "retrieved_teams": [
+        "Network Ops",
+        "Network Ops",
+        "Network Ops",
+        "Network Ops",
+        "Network Ops"
+      ],
+      "retrieval_team_relevance_rate": 1.0
+    }
+  },
+  {
+    "index": 4,
+    "number": "TEST_INC005",
+    "query": "SSL Handshake Failure on Ingress Gateway for Merchant Onboarding API. External merchant systems attempting to upload batch registration data via https://api.merchant-onboard.com are receiving SSL_ERROR_SYSCALL and TLS handshake timeout errors. F5 BIG-IP load balancer shows a spike in unfinished client handshakes.. SSL handshake TLS 1.3 F5 BIG-IP certificate chain load balancer Merchant Onboarding API cipher suite",
+    "ground_truth": "The root cause was an incomplete intermediate CA certificate chain on the Ingress VIP SSL Client Profile and an unoptimized TLS 1.3 cipher suite negotiation. Resolved by bundling the DigiCert Intermediate CA with the server certificate on the F5 profile, updating cipher suites, and verifying handshake completion.",
+    "ground_truth_team": "Network Ops",
+    "ground_truth_category": "Network",
+    "retrieved_context_ids": [
+      "INC00752",
+      "INC00619",
+      "INC00212",
+      "INC00531",
+      "INC00606"
+    ],
+    "retrieved_contexts": [
+      "Ingress Gateway VIP TLS handshake failure due to missing DigiCert Intermediate CA bundle. External merchant systems uploading batch onboarding data via Ingress HTTPS endpoints reported SSL_ERROR_SYSCALL and TLS handshake timeouts. F5 BIG-IP load balancer logged excessive unfinished client handshakes and unrecognized certificate authority errors.. Keywords: ssl handshake, tls 1.3, f5 big-ip, digicert, intermediate ca, certificate chain, load balancer, ingress gateway, cipher suite\nAffected Component: Load Balancer\nResolution: Testing via 'openssl s_client -connect api.merchant-onboard.com:443 -showcerts' identified that the F5 BIG-IP SSL Client Profile was configured with only the leaf server certificate without the DigiCert Intermediate CA bundle, causing mobile and external clients to terminate TLS 1.3 negotiation. The engineer downloaded the DigiCert Global Root G2 Intermediate certificate, concatenated it into a complete PEM bundle, bound the bundle to the Client SSL Profile, and optimized cipher suites to modern TLS 1.3 specs. Handshakes completed cleanly with zero SSL errors.",
+      "F5 BIG-IP SSL cipher suite incompatibility dropping TLS 1.3 mobile apps. Mobile application users on iOS 17 and Android 14 reported connection failures when logging into the retail banking portal, with apps displaying network error.. Keywords: f5 big-ip, tls 1.3, cipher suite, client ssl profile, handshake failure, mobile app\nAffected Component: Load Balancer VIP\nResolution: SSL handshake inspection with 'openssl s_client -connect api.bank.com:443 -tls1_3' returned handshake failure alert 40. The F5 Client SSL profile was restricted to legacy TLS 1.2 RSA cipher suites, lacking support for modern elliptic curve Diffie-Hellman TLS 1.3 ciphers (TLS_AES_256_GCM_SHA384). The engineer updated the Client SSL profile to enable TLS 1.3, enabled ECDSA certificates alongside RSA, and applied cipher group 'DEFAULT:!3DES:!RC4'. Mobile application logins succeeded instantly.",
+      "Unable to link new location to existing merchant ID. Some merchants receive authentication errors when attempting to log in to the Customer UI to review and e-sign the Merchant Agreement, preventing access to the document.. Keywords: authentication, load balancer, authentication service, timeout, rate limiting, network, health check, scaling\nAffected Component: Authentication Service\nResolution: The incident was caused by a misconfigured load balancer and an overloaded authentication service, leading to intermittent timeouts and authentication errors for merchants attempting to access the Customer UI. The root cause was identified through a structured diagnostic approach. First, the network engineers executed a series of diagnostic commands such as `tcpdump` on the load balancer to capture and analyze traffic patterns, revealing that the authentication service was receiving an excessive number of requests during peak login hours. They also checked the authentication service logs using `journalctl -u authentication-service` and found numerous '503 Service Unavailable' errors, indicating backend overload. Additionally, the team used Wireshark to inspect the network packets and confirmed that the load balancer was not correctly distributing the traffic across the authentication service nodes. To resolve the issue, the load balancer configuration was updated to implement a more efficient round-robin algorithm with health checks enabled. The authentication service was scaled horizontally by adding two additional nodes, and the connection pool size was increased to handle the higher load. Furthermore, the team implemented rate limiting to prevent excessive login attempts from a single source. These changes were deployed during a maintenance window, and post-deployment, the authentication service was monitored using Prometheus and Grafana to ensure stability. Merchants were able to access the Customer UI without timeouts, and the authentication errors were resolved.",
+      "SSL-VPN client authentication failure due to expired intermediate CA. Remote users logging into the corporate SSL-VPN portal received 'Certificate validation failed: Issuer untrusted' errors, preventing 450 remote workers from establishing sessions.. Keywords: ssl-vpn, intermediate ca, certificate validation, trust chain, openssl, handshake failure\nAffected Component: VPN Concentrator\nResolution: Analysis of the SSL-VPN gateway certificate store showed that the Intermediate Certificate Authority bundle had expired at 00:00 UTC. The engineer imported the renewed DigiCert Intermediate CA certificate into the gateway trust-chain via the administrative CLI ('crypto ca trustpool import') and bound the updated bundle to the SSL profile. SSL handshake validation was confirmed using 'openssl s_client -connect vpn.company.com:443', and remote worker logins restored immediately.",
+      "NGINX SSL reverse proxy SNI mismatch dropping multi-tenant connections. Customers visiting enterprise partner portal 'partner.company.com' received SSL handshake error 'SSL_ERROR_UNRECOGNIZED_NAME_ALERT' in their web browsers.. Keywords: nginx, sni mismatch, ssl handshake, reverse proxy, proxy_ssl_server_name, multi-tenant\nAffected Component: NGINX Load Balancer\nResolution: Inspection of NGINX reverse proxy error logs showed 'upstream SSL certificate verify failed' during client handshakes. The upstream backend cluster hosted multiple tenant domains, but the NGINX upstream proxy configuration was missing 'proxy_ssl_server_name on', failing to transmit Server Name Indication (SNI) to the backend. The engineer added 'proxy_ssl_server_name on' and 'proxy_ssl_name $host' to the location block, followed by 'nginx -s reload'. Handshakes completed cleanly with matching tenant SSL certificates."
+    ],
+    "retrieved_teams": [
+      "Network Ops",
+      "Network Ops",
+      "IT Support",
+      "Network Ops",
+      "Network Ops"
+    ],
+    "generated_answer": "Root Cause: INC00752 (missing DigiCert Intermediate CA bundle in SSL Client Profile causing TLS 1.3 negotiation termination) and INC00619 (legacy TLS 1.2 cipher suites incompatible with modern TLS 1.3 mobile clients).  \nResolution: 1. Use `openssl s_client -connect api.merchant-onboard.com:443 -showcerts` to verify the F5 BIG-IP SSL Client Profile certificate chain. 2. Download and concatenate the DigiCert Global Root G2 Intermediate certificate into a PEM bundle. 3. Bind the complete certificate bundle to the F5 Client SSL Profile. 4. Enable TLS 1.3 protocol and update cipher group to `DEFAULT:!3DES:!RC4` with ECDSA/RSA support. 5. Validate changes via `openssl s_client -connect api.merchant-onboard.com:443 -tls1_3`.",
+    "ragas_scores": {
+      "context_precision": 0.9166666666361111,
+      "context_recall": 1.0,
+      "faithfulness": 0.25,
+      "answer_relevancy": 0.5229966394943778
+    },
+    "triage_evaluation": {
+      "ground_truth_team": "Network Ops",
+      "predicted_team": "Network Ops",
+      "normalized_ground_truth_team": "Network Ops",
+      "normalized_predicted_team": "Network Ops",
+      "triage_match": true,
+      "predicted_priority": "1 - Critical",
+      "routing_justification": "SSL handshake failures on a load balancer impacting external merchant systems require immediate network infrastructure remediation.",
+      "retrieved_teams": [
+        "Network Ops",
+        "Network Ops",
+        "IT Support",
+        "Network Ops",
+        "Network Ops"
+      ],
+      "retrieval_team_relevance_rate": 0.8
+    }
+  },
+  {
+    "index": 5,
+    "number": "TEST_INC006",
+    "query": "Slow internet and dropped calls in Building B 3rd Floor. Multiple users on the 3rd floor of Building B complain that Microsoft Teams calls are robotic, breaking up, and dropping every few minutes. Speedtest shows high jitter.. Wi-Fi wireless jitter Aruba AP co-channel interference channel utilization Teams calls AirWave",
+    "ground_truth": "The root cause was severe co-channel Wi-Fi interference on 5GHz channels caused by overlapping access point radio coverage and high channel saturation. Resolved by enabling Dynamic Channel Allocation (DCA) on the wireless controller, reducing AP transmit power, and optimizing 5GHz channel distribution.",
+    "ground_truth_team": "Network Ops",
+    "ground_truth_category": "Network",
+    "retrieved_context_ids": [
+      "INC00772",
+      "INC00579",
+      "INC00511",
+      "INC00553",
+      "INC00398"
+    ],
+    "retrieved_contexts": [
+      "5GHz high-density Wi-Fi co-channel interference causing packet loss and VoIP call dropouts. Employees on Building B 3rd Floor reported severe audio dropouts and call disconnects during Microsoft Teams video meetings despite full Wi-Fi signal strength bars on laptops. Network monitoring showed high packet jitter and 22% frame retransmissions.. Keywords: 5ghz, co-channel interference, wifi, dynamic channel allocation, dca, teams call drop, transmit power, wlc\nAffected Component: Wireless LAN Controller\nResolution: RF spectrum analysis on the Cisco Catalyst 9800 WLC revealed severe co-channel Wi-Fi interference on 5GHz channels (channels 36 and 40) exceeding 65% channel utilization caused by overlapping access point radio coverage and high channel saturation. The engineer enabled Dynamic Channel Allocation (DCA) with 20MHz channel width, reduced AP transmit power levels from 20 dBm to 14 dBm across Building B 3rd floor, and optimized 5GHz channel distribution. Wi-Fi channel utilization dropped to 18% with zero dropped calls.",
+      "Co-channel interference on 2.4GHz band due to excessive AP transmit power. Users in open-plan office space reported sluggish internet speeds (under 2Mbps) on 2.4GHz legacy devices despite sitting directly underneath an access point.. Keywords: co-channel interference, 2.4ghz, transmit power control, tpc, rrm, rf survey, channel utilization\nAffected Component: Access Point\nResolution: RF spectrum survey using Ekahau and WLC telemetry ('show ap auto-rf 802.11b') showed Co-Channel Interference (CCI) exceeding 65% with signal overlap from four adjacent APs broadcasting at maximum power (30mW/15dBm). The engineer enabled Transmit Power Control (TPC) under RRM with a threshold of -70 dBm and disabled 2.4GHz radios on every second AP to establish a dual-band microcell design. 2.4GHz channel utilization dropped from 88% to 22%, increasing throughput to 45Mbps.",
+      "BGP community tag stripping across MPLS provider causing traffic reroute. Corporate voice traffic between Chicago and Dallas offices routed over the public internet rather than the dedicated MPLS WAN, causing jitter and dropped calls.. Keywords: bgp community, send-community, mpls, qos, jitter, voice traffic, customer edge\nAffected Component: Edge Router\nResolution: Inspection of BGP route advertisements with 'show ip bgp neighbor 10.254.1.1 advertised-routes' showed that custom QoS community tags (65000:100) were stripped because 'neighbor 10.254.1.1 send-community' was missing on the customer edge router. The engineer enabled community transmission on the peer configuration. The MPLS provider correctly prioritized the tagged prefixes, routing voice back onto the dedicated low-jitter circuit.",
+      "Switchport err-disable state triggered by BPDU Guard on user wall jack. A developer in Building B reported complete network loss on their workstation after connecting an unmanaged desktop switch to test multiple hardware devices.. Keywords: bpdu guard, err-disable, portfast, unmanaged switch, access port, spanning-tree\nAffected Component: Access Switch\nResolution: Checking 'show interfaces status err-disabled' identified port Gi1/0/9 in error-disabled state with reason 'bpduguard'. The user's unmanaged desktop switch transmitted Spanning Tree BPDUs into a port configured with PortFast and BPDU Guard. The engineer informed the user of corporate network policy prohibiting unmanaged switches, disconnected the unauthorized hub, and issued 'shutdown' followed by 'no shutdown' on Gi1/0/9. The port re-enabled in full-duplex Gigabit mode.",
+      "Network connectivity issue preventing location addition. Intermittent latency spikes were observed, causing delays in API responses during merchant data input by Sales Agents. This variability in response times impacted the overall speed of onboarding operations.. Keywords: network latency, api connectivity, nic failure, qos configuration, packet loss, traceroute, mtr, network monitoring\nAffected Component: Network Infrastructure\nResolution: Upon initial assessment of the incident, the IT Support team identified that the intermittent latency spikes were primarily impacting the Sales Agent's device network connectivity, specifically during API interactions required for merchant data input. The first step in the resolution process was to perform a thorough network diagnostic to isolate the root cause. Using the `ping` and `traceroute` commands, we tested connectivity to the backend API endpoints and observed inconsistent latency values between 200-800 ms during peak usage periods. Further investigation revealed that the Sales Agent's device was experiencing packet loss and jitter, which was confirmed using the `mtr` tool, which provided a detailed view of the network path and identified a bottleneck at the local network gateway. The team then conducted a deep dive into the device's network configuration, checking for any misconfigured Quality of Service (QoS) settings or firewall rules that could be affecting traffic prioritization. No misconfigurations were found. The next step was to perform a hardware inspection of the Sales Agent's device, which revealed that the network interface card (NIC) was experiencing intermittent failures, likely due to overheating and physical wear. To resolve this, the malfunctioning NIC was replaced with a high-performance, enterprise-grade model, which significantly reduced latency to below 50 ms. Additionally, the team implemented a network monitoring solution using PRTG Network Monitor to continuously track latency and packet loss metrics, ensuring early detection of similar issues in the future. The Sales Agent was also provided with updated network drivers and a script to periodically check for connectivity issues using `curl` and `ping` commands, which would automatically alert the IT team if any anomalies were detected. These measures ensured seamless continuation of the merchant data input process and restored the required network performance for onboarding operations."
+    ],
+    "retrieved_teams": [
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "IT Support"
+    ],
+    "generated_answer": "Root Cause: Co-channel interference on 5GHz channels (36 and 40) exceeding 65% channel utilization caused by overlapping access point radio coverage, as documented in INC00772. This matches the reported high jitter and Teams call dropouts in Building B 3rd Floor.\nResolution: Enable Dynamic Channel Allocation (DCA) with 20MHz channel width on the Aruba APs, reduce transmit power levels to 14 dBm across Building B 3rd floor access points, and optimize 5GHz channel distribution to minimize overlap, as implemented in INC00772.",
+    "ragas_scores": {
+      "context_precision": 0.99999999995,
+      "context_recall": 1.0,
+      "faithfulness": 0.8888888888888888,
+      "answer_relevancy": 0.8397576068316365
+    },
+    "triage_evaluation": {
+      "ground_truth_team": "Network Ops",
+      "predicted_team": "Network Ops",
+      "normalized_ground_truth_team": "Network Ops",
+      "normalized_predicted_team": "Network Ops",
+      "triage_match": true,
+      "predicted_priority": "2 - High",
+      "routing_justification": "The issue involves wireless LAN interference impacting VoIP quality, requiring network infrastructure tuning",
+      "retrieved_teams": [
+        "Network Ops",
+        "Network Ops",
+        "Network Ops",
+        "Network Ops",
+        "IT Support"
+      ],
+      "retrieval_team_relevance_rate": 0.8
+    }
+  }
+]

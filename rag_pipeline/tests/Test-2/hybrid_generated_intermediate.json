@@ -1,0 +1,206 @@
+[
+  {
+    "index": 0,
+    "number": "TEST_INC001",
+    "query": "BGP Route Flapping Causing Intermittent Packet Drops on Secondary WAN Link. Network monitoring alerted on frequent BGP state changes (Established to Active/Idle) on edge router rtr-core-dc2 connecting to ISP-2. Traffic across the secondary WAN circuit is dropping 28% of packets every 6-8 minutes, causing latency spikes in inter-DC replication.. BGP route flapping WAN packet loss MTU hold timer edge router replication latency",
+    "ground_truth": "The root cause was aggressive BGP hold-timer mismatch and MTU black-holing on the secondary ISP link. The issue was resolved by aligning the BGP keepalive/hold timers to 30s/90s on rtr-core-dc2, configuring path MTU discovery, and clamping TCP MSS to 1400 on the transit interface.",
+    "ground_truth_team": "Network Ops",
+    "ground_truth_category": "Network",
+    "urgency": 1,
+    "impact": 2,
+    "retrieved_context_ids": [
+      "INC00503",
+      "INC00501",
+      "INC00510",
+      "INC00502",
+      "INC00543",
+      "INC00607",
+      "INC00548",
+      "INC00627"
+    ],
+    "retrieved_contexts": [
+      "BGP route flapping mitigated by route flap dampening configuration. Continuous BGP update floods from an upstream transit provider caused routing table churn across core switches, leading to transient packet drops and degraded inter-site replication performance.. Keywords: bgp, route flap dampening, routing table churn, flap-statistics, prefix suppression, transit",
+      "BGP session reset due to keepalive and hold timer mismatch. Network operations center observed cyclic BGP state transitions between Established and Idle on border router rtr-gw-01 connecting to ISP-A. WAN traffic failovers were causing latency spikes and packet loss for cloud application traffic.. Keywords: bgp, hold-timer, keepalive, border router, route flapping, peering reset, wan",
+      "BFD aggressive timer sensitivity triggering premature BGP session resets. Inter-datacenter backbone links experienced frequent BGP session flaps every 5 to 10 minutes during backup replication bursts, degrading application sync.. Keywords: bfd, bgp flap, timer tuning, qos, micro-burst, backbone link, dscp",
+      "MTU black-holing on secondary WAN circuit causing large packet drops. Branch offices connected across the secondary WAN link reported intermittent SSH and HTTPS connection freezes, while basic ICMP pings succeeded. Traffic monitoring showed 15% packet loss on packets larger than 1400 bytes.. Keywords: mtu black hole, tcp mss, packet loss, wan circuit, pmtud, fragmentation, interface",
+      "Route-based IPsec tunnel dropping traffic due to BGP hold-time expiration. Route-based IPsec VPN between on-premises datacenter and Azure Virtual Network Gateway flapped intermittently, disrupting hybrid active directory sync.. Keywords: azure vpn, route-based vpn, apipa, bgp timers, jitter, virtual network gateway",
+      "Anycast DNS BGP route flapping causing high packet loss on recursive resolvers. External client DNS resolution experienced 35% packet drops and multi-second timeouts when querying company authoritative nameservers.. Keywords: anycast dns, bgp route flap, exabgp, recursive resolver, dampening, dns packet loss",
+      "GRE over IPsec keepalive packet drop across carrier WAN causing link flap. GRE over IPsec tunnel connecting the corporate HQ to the manufacturing plant reset every 30 seconds, causing continuous OSPF neighbor state re-evaluations.. Keywords: gre over ipsec, tunnel keepalive, ospf neighbor, wan latency, link flap, interface reset",
+      "Azure ExpressRoute BFD session drop causing asymmetric circuit failover. Production database replication to Azure East US region experienced sudden 25% packet drops and out-of-order packet delivery during normal operational hours.. Keywords: azure expressroute, bfd session, asymmetric routing, circuit failover, stateful firewall, packet drop"
+    ],
+    "retrieved_teams": [
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "Network Ops"
+    ],
+    "generated_answer": "Incident type: BGP Route Flapping | Affected Systems: Edge Router (rtr-core-dc2), Secondary WAN Circuit  \nRoot Causes: BGP hold timer mismatch (INC00501, INC00543), route dampening misconfiguration (INC00503), and potential MTU/path MTU discovery issues (INC00502). The 6-8 minute flapping interval suggests either misaligned BGP timers or aggressive dampening thresholds.  \n\nInvestigation Steps:  \n1. Check BGP session timers on rtr-core-dc2 via `show ip bgp summary` to confirm hold/keepalive mismatches with ISP-2.  \n2. Analyze BGP dampening configuration using `show ip bgp dampening flap-statistics` to identify flapping prefixes and suppression thresholds.  \n3. Validate MTU/path MTU discovery with `ping -s 1472 -M do <remote_ip>` to detect black-holes.  \n4. Review BGP logs via `show log | include BGP` for patterned session resets or route withdrawals.  \n5. Monitor WAN latency and jitter using `show interface <wan_interface>` and packet loss via `ping -c 100 <remote_ip>`.  \n\nResolution:  \n1. Containment: Temporarily disable BGP route dampening to prevent suppressed routes from causing further instability.  \n2. Fix: Adjust BGP timers on rtr-core-dc2 to match ISP-2's configuration (e.g., `neighbor <isp_ip> timers 10 30`) and apply QoS prioritization for BGP traffic.  \n3. Long-term: Implement BGP route dampening with adjusted thresholds (e.g., half-life 15min, suppress threshold 2000) and enable path MTU discovery.  \n\nPreventive Recommendations:  \n- Regularly audit BGP timer configurations across edge routers.  \n- Monitor BGP flap statistics and set alerts for flapping prefixes.  \n- Enforce QoS policies for critical BGP and replication traffic.  \n- Validate MTU settings during WAN circuit provisioning.",
+    "structured": {
+      "predicted_team": "Network Ops",
+      "predicted_priority": "2 - High",
+      "routing_justification": "BGP route flapping with 28% packet loss on a secondary WAN link directly impacts inter-DC replication, matching high-urgency patterns in historical incidents (INC00501, INC00543).",
+      "incident_attribution": [
+        {
+          "id": "INC00501",
+          "team": "Network Ops",
+          "urgency": "2",
+          "impact": "2"
+        },
+        {
+          "id": "INC00543",
+          "team": "Network Ops",
+          "urgency": "2",
+          "impact": "2"
+        },
+        {
+          "id": "INC00503",
+          "team": "Network Ops",
+          "urgency": "2",
+          "impact": "2"
+        },
+        {
+          "id": "INC00502",
+          "team": "Network Ops",
+          "urgency": "2",
+          "impact": "2"
+        }
+      ]
+    }
+  },
+  {
+    "index": 1,
+    "number": "TEST_INC002",
+    "query": "Cannot access internal inventory portal from branch office. Staff at the Seattle branch office report that the internal inventory management tool is not loading at all today. Browser says connection timed out. Other websites like Google work fine.. IPsec VPN branch office inventory portal timeout IKEv2 Security Association tunnel",
+    "ground_truth": "The root cause was an expired IPsec phase-2 Security Association (SA) lifetime configuration on the Seattle branch gateway router, preventing renegotiation with the central VPN concentrator. Resolved by clearing stale SAs with 'clear crypto ipsec sa', updating the IKEv2 proposal lifetimes to match the central profile, and verifying tunnel stability.",
+    "ground_truth_team": "Network Ops",
+    "ground_truth_category": "Network",
+    "urgency": 2,
+    "impact": 2,
+    "retrieved_context_ids": [
+      "INC00542",
+      "INC00526",
+      "INC00544",
+      "INC00530",
+      "INC00534",
+      "INC00538",
+      "INC00025",
+      "INC00409"
+    ],
+    "retrieved_contexts": [
+      "Site-to-site IPsec tunnel down due to expired machine authentication cert. Production IPsec tunnel between Atlanta and Frankfurt datacenters failed at midnight, severing database replication across European and US regions.. Keywords: machine certificate, certificate expired, ikev2 signature, pki, x.509, ipsec tunnel",
+      "IPsec Phase 2 SA lifetime mismatch causing hourly tunnel drop. Branch office in Austin experienced dropouts on their site-to-site IPsec tunnel to the primary data center exactly once every 60 minutes, disrupting ongoing VoIP calls and active database sessions.. Keywords: ipsec sa, phase 2 lifetime, tunnel teardown, vpn concentrator, rekey proposal, security association",
+      "SSL-VPN portal connection timeout caused by RADIUS MFA push delay. Remote users logging into the SSL-VPN portal were repeatedly rejected with 'Authentication timeout', even though users approved push notifications on their phones.. Keywords: ssl-vpn, radius timeout, mfa push, duo security, authentication timeout, vpn concentrator",
+      "IPsec proxy-ID encryption domain mismatch dropping subnet traffic. Staff in the Phoenix office could ping data center web servers over the IPsec VPN, but all traffic destined for the newly deployed analytics subnet (10.240.50.0/24) timed out.. Keywords: proxy-id, encryption domain, traffic selector, policy-based vpn, phase 2 sa, subnet drop",
+      "Dynamic VTI IPsec session exhaustion caused by stale zombie client sessions. Remote branch offices were unable to establish dynamic IPsec tunnels to the corporate hub, receiving 'Resource temporarily unavailable' error messages.. Keywords: vti, session exhaustion, zombie sessions, crypto session-limit, ike delete, tunnel limit",
+      "IPsec VTI MTU fragmentation causing TLS handshake failures on internal portals. Employees accessing internal web applications over an IPsec VTI tunnel between offices experienced connection timeouts on large web pages, while ping and small telnet sessions worked.. Keywords: vti mtu, tls handshake failure, tcp adjust-mss, fragmentation, df bit, ipsec tunnel",
+      "Sales Agent unable to access merchant equipment options. Sales Agent experienced frequent network timeouts when selecting equipment for a merchant, causing delays in the onboarding process.. Keywords: crm, inventory service, database connection, sql, load testing, network latency, configuration, postgresql",
+      "Sales UI not loading for Sales Agent. Certain sales agents are facing an access permission error that is blocking them from configuring fees and services for specific merchants. This issue is hindering the customization of service offerings.. Keywords: authentication, rbac, sso, session, token, credentials, portal, access"
+    ],
+    "retrieved_teams": [
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "IT Support",
+      "IT Support"
+    ],
+    "generated_answer": "Incident type: IPsec Tunnel Failure | Affected Systems: Seattle branch office IPsec IKEv2 tunnel, internal inventory portal\n\nRoot Causes: \n- Expired machine certificate (INC00542) causing IKEv2 SA failure\n- Proxy-ID encryption domain mismatch (INC00530) potentially blocking specific subnet traffic\n- Dynamic VTI session exhaustion (INC00534) could block new connections if tunnel is down\n\nInvestigation Steps: \n1. Check IKEv2 SA status: `show crypto session detail` on Seattle gateway\n2. Verify certificate validity: `crypto pki certificate chain` on Atlanta gateway\n3. Confirm tunnel status: `ping 203.0.113.10` (replace with actual peer IP)\n4. Check crypto policy: `show crypto ipsec sa` for active SAs\n5. Validate proxy-ID configuration: `show crypto ipsec profile` on both endpoints\n6. Monitor tunnel metrics: `show crypto session statistics` for rekey failures\n\nResolution: \n1. Containment: Isolate Seattle branch from main network via temporary ACL to prevent further impact\n2. Fix: \n   - Renew expired certificate on Seattle gateway using `crypto pki import SEATTLE-CERT pem`\n   - Re-establish IKEv2 SA with `clear crypto sa peer <IP>`\n   - Verify proxy-ID includes inventory subnet (e.g., 10.240.50.0/24)\n3. Long-term: \n   - Implement certificate auto-renewal via PKI integration\n   - Add subnet to IPsec policy with `set security ipsec profile INVENTORY-PROFILE match remote 10.240.50.0/24`\n\nPreventive Recommendations: \n- Enable certificate expiration alerts in PKI system\n- Configure dynamic tunnel keepalive checks every 30 seconds\n- Monitor crypto session limits with `show crypto session summary` hourly",
+    "structured": {
+      "predicted_team": "Network Ops",
+      "predicted_priority": "2 - High",
+      "routing_justification": "The issue involves an IPsec IKEv2 Security Association tunnel failure impacting access to a critical internal tool, matching historical patterns of network tunnel disruptions",
+      "incident_attribution": [
+        {
+          "id": "INC00542",
+          "team": "Network Ops",
+          "urgency": "1",
+          "impact": "1"
+        },
+        {
+          "id": "INC00530",
+          "team": "Network Ops",
+          "urgency": "2",
+          "impact": "2"
+        },
+        {
+          "id": "INC00534",
+          "team": "Network Ops",
+          "urgency": "1",
+          "impact": "2"
+        }
+      ]
+    }
+  },
+  {
+    "index": 2,
+    "number": "TEST_INC003",
+    "query": "Internal DNS Resolution Failure for Payment Gateway Microservices. Payment processing pods in Kubernetes cluster prod-east are throwing 'EAI_AGAIN' and NXDOMAIN errors when resolving internal service endpoint payment-gateway.internal.corp. Direct IP pings to the pods succeed, but host lookups fail intermittently.. CoreDNS DNS resolution NXDOMAIN EAI_AGAIN Kubernetes Payment Gateway UDP buffer",
+    "ground_truth": "The root cause was CoreDNS upstream forwarder rate-limiting due to UDP port exhaustion on the primary internal resolver node. Resolved by auto-scaling CoreDNS replicas, configuring CoreDNS cache plugin with a 30-second TTL minimum, and directing upstream queries to redundant internal DNS servers.",
+    "ground_truth_team": "Network Ops",
+    "ground_truth_category": "Network",
+    "urgency": 1,
+    "impact": 1,
+    "retrieved_context_ids": [
+      "INC00601",
+      "INC00602",
+      "INC00617",
+      "INC00546",
+      "INC00361",
+      "INC00613",
+      "INC00621",
+      "INC00012"
+    ],
+    "retrieved_contexts": [
+      "CoreDNS crash-looping in Kubernetes cluster due to recursive query loop. Production Kubernetes cluster prod-east-01 experienced widespread DNS resolution failures across all microservice pods, halting payment processing and order ingestion.. Keywords: coredns, kubernetes, dns loop, kube-dns, resolv.conf, crashloopbackoff, microservice dns",
+      "Split-brain DNS zone transfer desync breaking payment gateway routing. Payment microservices reported intermittent host unreachable errors when calling internal gateway endpoint 'paygate.corp.internal', failing 50% of credit card transactions.. Keywords: split-brain dns, bind, zone transfer, axfr, tsig key, rndc, payment gateway",
+      "DNS negative caching storing NXDOMAIN responses for newly provisioned hosts. Developers deploying new microservice 'billing-api.corp.internal' could not resolve the hostname for 2 hours after adding the DNS record, while public DNS worked.. Keywords: negative caching, nxdomain, soa minimum ttl, dns cache flush, rndc flush, internal dns",
+      "Remote access VPN split-DNS failure preventing internal hostname resolution. Employees connected to the remote access VPN could access internal servers by IP address, but internal domain queries like 'gitlab.corp.internal' failed to resolve.. Keywords: split-dns, hostname resolution, scutil, internal domain, vpn client profile, dns servers",
+      "Fee configuration not reflecting for additional location. Merchants are experiencing network timeouts when trying to retrieve and e-sign the Merchant Agreement PDF. This is causing delays in the onboarding process as merchants are unable to proceed.. Keywords: payment gateway, configuration management, kubernetes, api endpoint, ci/cd pipeline, network latency, configmap, microservices",
+      "DNSSEC validation failure on corporate resolvers due to expired KSK. Employees were unable to access external corporate portal 'secure.example.com', with browsers returning 'DNS_PROBE_FINISHED_NXDOMAIN' on all internal workstations.. Keywords: dnssec, rrsig expired, ksk rollover, ds record, delv, dns validation failure",
+      "CoreDNS cache plugin memory leak causing pod OOMKilled evictions. Kubernetes cluster experienced cyclic DNS degradation every 4 hours as CoreDNS pods were continuously terminated by the Linux kernel Out-Of-Memory killer.. Keywords: coredns, oomkilled, memory leak, cache plugin, kubernetes, prometheus, denial cache",
+      "API endpoint returning 500 error for merchant creation. A software bug in the fee calculation module is causing incorrect fees to be applied to merchant accounts by Sales Agents. Several merchants have been overcharged.. Keywords: api, fee calculation, microservices, kubernetes, elk stack, pytest, rolling update, payment gateway"
+    ],
+    "retrieved_teams": [
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "IT Support"
+    ],
+    "generated_answer": "Incident type: Internal DNS Resolution Failure affecting Payment Gateway Microservices in Kubernetes cluster prod-east. Affected systems: CoreDNS, payment-gateway internal service endpoints, Kubernetes pods.\n\nRoot Causes: \n- CoreDNS misconfiguration causing NXDOMAIN errors (INC00601: recursive loop from resolv.conf pointing to 127.0.0.53)\n- Negative caching storing NXDOMAIN responses (INC00617: SOA record negative caching TTL of 7200s)\n- CoreDNS cache plugin memory leak (INC00621: unique negative queries overwhelming cache)\n\nInvestigation Steps: \n1. Check CoreDNS logs: kubectl logs -n kube-system -l k8s-app=kube-dns\n2. Verify DNS record existence: nslookup payment-gateway.internal.corp\n3. Check negative caching TTL: nslookup -type=SOA internal.corp\n4. Monitor UDP buffer usage: netstat -an | grep :53 | awk '{print $6}' | sort | uniq -c\n5. Analyze DNS query patterns: tcpdump -i eth0 port 53 -nn\n\nResolution: \n1. Containment: Temporarily disable negative caching via rndc flushname payment-gateway.internal.corp\n2. Fix: Adjust CoreDNS ConfigMap to enforce TTL limits and verify DNS record propagation\n3. Long-term: Implement DNS health checks, monitor CoreDNS memory metrics, and ensure proper TSIG key management\n\nPreventive Recommendations: \n- Regularly audit DNS record TTL settings\n- Monitor CoreDNS memory usage with Prometheus\n- Implement DNSSEC validation with proper key management\n- Establish automated DNS health checks for critical services",
+    "structured": {
+      "predicted_team": "Network Ops",
+      "predicted_priority": "2 - High",
+      "routing_justification": "The incident involves CoreDNS misconfiguration and DNS resolution failures impacting critical payment processing services, matching historical patterns in Network Ops incidents.",
+      "incident_attribution": [
+        {
+          "id": "INC00601",
+          "team": "Network Ops",
+          "urgency": "1",
+          "impact": "1"
+        },
+        {
+          "id": "INC00617",
+          "team": "Network Ops",
+          "urgency": "3",
+          "impact": "2"
+        },
+        {
+          "id": "INC00621",
+          "team": "Network Ops",
+          "urgency": "2",
+          "impact": "1"
+        }
+      ]
+    }
+  }
+]

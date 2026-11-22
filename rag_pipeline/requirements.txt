@@ -1,0 +1,36 @@
+# ── Core RAG dependencies ──────────────────────────────────────────────────────
+chromadb>=0.5.0
+rank-bm25>=0.2.2
+
+# sentence-transformers handles:
+#   - BAAI/bge-base-en-v1.5  (bi-encoder, dense retrieval + ingestion)
+#   - BAAI/bge-reranker-base (cross-encoder, reranking)
+# Both are auto-downloaded from HuggingFace Hub on first use.
+sentence-transformers>=3.0.0
+
+# HuggingFace Hub client (for explicit model downloads if needed)
+huggingface_hub>=0.24.0
+
+# ── MongoDB (unified FastAPI backend) ─────────────────────────────────────────
+motor>=3.4.0            # Async Motor driver (replaces Mongoose from the old Express backend)
+
+
+# ── Ollama Python client (LLM only: qwen3:8b) ─────────────────────────────────
+ollama>=0.3.0
+
+# ── NLP / text preprocessing ──────────────────────────────────────────────────
+spacy>=3.7.0
+
+# ── API server ────────────────────────────────────────────────────────────────
+fastapi>=0.111.0
+uvicorn[standard]>=0.30.0
+
+# ── Evaluation ────────────────────────────────────────────────────────────────
+ragas>=0.1.14
+datasets>=2.20.0               # HuggingFace datasets (used by ragas)
+
+# ── Utilities ─────────────────────────────────────────────────────────────────
+python-dotenv>=1.0.0
+requests>=2.32.0
+tqdm>=4.66.0
+numpy>=1.26.0

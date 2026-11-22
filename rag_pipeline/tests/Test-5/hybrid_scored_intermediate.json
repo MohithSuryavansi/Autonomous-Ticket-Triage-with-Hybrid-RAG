@@ -1,0 +1,1244 @@
+[
+  {
+    "index": 0,
+    "number": "TEST_INC001",
+    "query": "BGP Route Flapping Causing Intermittent Packet Drops on Secondary WAN Link. Network monitoring alerted on frequent BGP state changes (Established to Active/Idle) on edge router rtr-core-dc2 connecting to ISP-2. Traffic across the secondary WAN circuit is dropping 28% of packets every 6-8 minutes, causing latency spikes in inter-DC replication.. BGP route flapping WAN packet loss MTU hold timer edge router replication latency",
+    "ground_truth": "The root cause was aggressive BGP hold-timer mismatch and MTU black-holing on the secondary ISP link. The issue was resolved by aligning the BGP keepalive/hold timers to 30s/90s on rtr-core-dc2, configuring path MTU discovery, and clamping TCP MSS to 1400 on the transit interface.",
+    "ground_truth_team": "Network Ops",
+    "ground_truth_category": "Network",
+    "urgency": 1,
+    "impact": 2,
+    "retrieved_context_ids": [
+      "INC00503",
+      "INC00501",
+      "INC00510",
+      "INC00502",
+      "INC00543"
+    ],
+    "retrieved_contexts": [
+      "BGP route flapping mitigated by route flap dampening configuration. Continuous BGP update floods from an upstream transit provider caused routing table churn across core switches, leading to transient packet drops and degraded inter-site replication performance.. Keywords: bgp, route flap dampening, routing table churn, flap-statistics, prefix suppression, transit\nAffected Component: Core Switch\nResolution: Review of 'show ip bgp dampening flap-statistics' identified that prefix 198.18.0.0/15 flapped 42 times within 20 minutes due to an unstable upstream fiber link. The engineer implemented BGP Route Flap Dampening with half-life of 15 minutes, suppress threshold of 2000, and reuse threshold of 750. The flapping routes were suppressed, stabilizing the routing tables and restoring normal replication throughput.",
+      "BGP session reset due to keepalive and hold timer mismatch. Network operations center observed cyclic BGP state transitions between Established and Idle on border router rtr-gw-01 connecting to ISP-A. WAN traffic failovers were causing latency spikes and packet loss for cloud application traffic.. Keywords: bgp, hold-timer, keepalive, border router, route flapping, peering reset, wan\nAffected Component: Edge Router\nResolution: Diagnostics via 'show ip bgp summary' and 'show log | include BGP' revealed that the BGP hold timer was expiring repeatedly. Investigation confirmed that the ISP had reconfigured their peer timers to 10s keepalive / 30s hold, while rtr-gw-01 was configured with default 30s/90s timers. The issue was resolved by negotiating matching timers via 'neighbor 198.51.100.1 timers 10 30' and applying BGP route dampening. Post-change telemetry over 2 hours confirmed zero peering resets and stable latency across the transit link.",
+      "BFD aggressive timer sensitivity triggering premature BGP session resets. Inter-datacenter backbone links experienced frequent BGP session flaps every 5 to 10 minutes during backup replication bursts, degrading application sync.. Keywords: bfd, bgp flap, timer tuning, qos, micro-burst, backbone link, dscp\nAffected Component: Core Router\nResolution: Log analysis showed Bidirectional Forwarding Detection (BFD) tearing down BGP peering because transit interface micro-bursts delayed BFD control packets past the 150ms multiplier threshold. The engineer tuned BFD timers on the interface from 'bfd interval 50 min_rx 50 multiplier 3' to 'interval 250 min_rx 250 multiplier 3' and assigned BFD packets to high-priority QoS queue (DSCP CS6). Peering stability was restored with 0 drops under load.",
+      "MTU black-holing on secondary WAN circuit causing large packet drops. Branch offices connected across the secondary WAN link reported intermittent SSH and HTTPS connection freezes, while basic ICMP pings succeeded. Traffic monitoring showed 15% packet loss on packets larger than 1400 bytes.. Keywords: mtu black hole, tcp mss, packet loss, wan circuit, pmtud, fragmentation, interface\nAffected Component: WAN Circuit\nResolution: The network team ran 'ping -s 1472 -M do 10.200.1.1' which failed, pinpointing an MTU black-hole where transit routers silently dropped packets exceeding path MTU without sending ICMP Fragmentation Needed packets. The engineer applied TCP MSS clamping via 'ip tcp adjust-mss 1360' on the transit interface and enabled Path MTU Discovery. Retesting confirmed 100% transmission for 1500-byte packets and resolved application session stalling.",
+      "Route-based IPsec tunnel dropping traffic due to BGP hold-time expiration. Route-based IPsec VPN between on-premises datacenter and Azure Virtual Network Gateway flapped intermittently, disrupting hybrid active directory sync.. Keywords: azure vpn, route-based vpn, apipa, bgp timers, jitter, virtual network gateway\nAffected Component: Firewall Gateway\nResolution: Diagnostics showed the IPsec tunnel was stable, but BGP peering over the APIPA tunnel interface (169.254.21.1) was resetting. High WAN jitter caused BGP keepalive packets to be delayed past the 30-second hold timer. The engineer tuned BGP timers on the local route-based gateway to match Azure's recommended 60-second hold-timer ('neighbor 169.254.21.2 timers 20 60') and prioritized BGP traffic on the tunnel interface. BGP peering stabilized with zero drops."
+    ],
+    "retrieved_teams": [
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "Network Ops"
+    ],
+    "generated_answer": "Root Cause: BGP route flapping caused by upstream link instability (INC00503) and BGP hold timer mismatches (INC00501, INC00543) leading to session resets and packet loss.  \nResolution: 1. Verify BGP timers on rtr-core-dc2 using 'show ip bgp summary' to confirm hold timer alignment with ISP-2. 2. Adjust timers via 'neighbor <ISP_IP> timers <keepalive> <hold>' to match ISP-2's configuration (e.g., 10 30 as in INC00501). 3. Apply BGP route flap dampening with 'ip bgp dampening' to suppress flapping routes (as in INC00503). 4. Check BFD timers on the interface using 'show bfd interface' and adjust to prevent premature session resets (as in INC00510). 5. Validate MTU settings with 'ping -s 1472 -M do <remote_IP>' to rule out black-holes (INC00502).",
+    "structured": {
+      "predicted_team": "Network Ops",
+      "predicted_priority": "2 - High",
+      "routing_justification": "BGP route flapping and packet loss on a secondary WAN link directly impacts inter-DC replication, requiring Network Ops expertise in BGP configuration and timer synchronization.",
+      "incident_attribution": [
+        {
+          "id": "INC00503",
+          "team": "Network Ops",
+          "urgency": "2",
+          "impact": "2"
+        },
+        {
+          "id": "INC00501",
+          "team": "Network Ops",
+          "urgency": "2",
+          "impact": "2"
+        },
+        {
+          "id": "INC00510",
+          "team": "Network Ops",
+          "urgency": "2",
+          "impact": "2"
+        },
+        {
+          "id": "INC00502",
+          "team": "Network Ops",
+          "urgency": "2",
+          "impact": "2"
+        },
+        {
+          "id": "INC00543",
+          "team": "Network Ops",
+          "urgency": "2",
+          "impact": "2"
+        }
+      ]
+    },
+    "ragas_scores": {
+      "context_precision": 0.6791666666496875,
+      "context_recall": 1.0,
+      "faithfulness": 0.21428571428571427,
+      "answer_relevancy": 0.8032396602587354
+    }
+  },
+  {
+    "index": 1,
+    "number": "TEST_INC002",
+    "query": "Cannot access internal inventory portal from branch office. Staff at the Seattle branch office report that the internal inventory management tool is not loading at all today. Browser says connection timed out. Other websites like Google work fine.. IPsec VPN branch office inventory portal timeout IKEv2 Security Association tunnel",
+    "ground_truth": "The root cause was an expired IPsec phase-2 Security Association (SA) lifetime configuration on the Seattle branch gateway router, preventing renegotiation with the central VPN concentrator. Resolved by clearing stale SAs with 'clear crypto ipsec sa', updating the IKEv2 proposal lifetimes to match the central profile, and verifying tunnel stability.",
+    "ground_truth_team": "Network Ops",
+    "ground_truth_category": "Network",
+    "urgency": 2,
+    "impact": 2,
+    "retrieved_context_ids": [
+      "INC00542",
+      "INC00526",
+      "INC00544",
+      "INC00530",
+      "INC00534"
+    ],
+    "retrieved_contexts": [
+      "Site-to-site IPsec tunnel down due to expired machine authentication cert. Production IPsec tunnel between Atlanta and Frankfurt datacenters failed at midnight, severing database replication across European and US regions.. Keywords: machine certificate, certificate expired, ikev2 signature, pki, x.509, ipsec tunnel\nAffected Component: IPsec Tunnel\nResolution: Gateway logs via 'show log vpn' displayed 'IKEv2 signature authentication failed: certificate expired'. The X.509 machine certificate installed on the Atlanta gateway had expired. The engineer enrolled and downloaded an updated certificate from the enterprise PKI, imported it into the router key-store ('crypto pki import ATLANTA-CERT pem'), and bound it to the IKEv2 trust profile. The tunnel re-authenticated and resumed full database replication within minutes.",
+      "IPsec Phase 2 SA lifetime mismatch causing hourly tunnel drop. Branch office in Austin experienced dropouts on their site-to-site IPsec tunnel to the primary data center exactly once every 60 minutes, disrupting ongoing VoIP calls and active database sessions.. Keywords: ipsec sa, phase 2 lifetime, tunnel teardown, vpn concentrator, rekey proposal, security association\nAffected Component: IPsec Tunnel\nResolution: Diagnostics using 'show crypto ipsec sa' on gateway rtr-aus-gw revealed that Phase 2 Security Associations (SA) were renegotiated every 3600 seconds on the branch, whereas the central VPN concentrator enforced a lifetime of 28800 seconds without accepting branch rekey proposals. The engineer synchronized the IPsec transform proposal lifetime to 28800 seconds via 'set security ipsec proposal IPSEC-PROP lifetime-seconds 28800' and cleared stale SAs. Continuous ping monitoring over 4 hours confirmed continuous uptime without hourly renegotiation drops.",
+      "SSL-VPN portal connection timeout caused by RADIUS MFA push delay. Remote users logging into the SSL-VPN portal were repeatedly rejected with 'Authentication timeout', even though users approved push notifications on their phones.. Keywords: ssl-vpn, radius timeout, mfa push, duo security, authentication timeout, vpn concentrator\nAffected Component: VPN Concentrator\nResolution: Investigation revealed that the SSL-VPN gateway had a RADIUS server response timeout of 10 seconds. When users took 12 to 15 seconds to approve the mobile Duo MFA push notification, the gateway timed out the request before the RADIUS server returned 'Access-Accept'. The engineer adjusted the RADIUS authentication timeout on the gateway from 10 to 60 seconds ('set authentication radius-server timeout 60'). Subsequent MFA authentications completed reliably.",
+      "IPsec proxy-ID encryption domain mismatch dropping subnet traffic. Staff in the Phoenix office could ping data center web servers over the IPsec VPN, but all traffic destined for the newly deployed analytics subnet (10.240.50.0/24) timed out.. Keywords: proxy-id, encryption domain, traffic selector, policy-based vpn, phase 2 sa, subnet drop\nAffected Component: IPsec Tunnel\nResolution: Diagnostics via 'show crypto ipsec sa' revealed that the active Phase 2 Security Association only defined Proxy-ID for 10.200.0.0/16, causing traffic for 10.240.50.0/24 to be dropped unencrypted. The engineer updated the local traffic selector on the policy-based VPN to include the 10.240.50.0/24 CIDR block on both endpoints. Following a quick SA re-initiation via 'clear crypto sa peer 203.0.113.10', bidirectionally routed traffic to the analytics cluster succeeded with 0% packet loss.",
+      "Dynamic VTI IPsec session exhaustion caused by stale zombie client sessions. Remote branch offices were unable to establish dynamic IPsec tunnels to the corporate hub, receiving 'Resource temporarily unavailable' error messages.. Keywords: vti, session exhaustion, zombie sessions, crypto session-limit, ike delete, tunnel limit\nAffected Component: VPN Concentrator\nResolution: Diagnostics via 'show crypto session summary' indicated 2048 active sessions, reaching the hardware platform's licensed limit. Review of the session table revealed hundreds of orphaned sessions from laptops that disconnected ungracefully without sending IKE Delete payloads. The engineer reduced the DPD idle timeout to 30 seconds, enabled aggressive session cleanup ('crypto session-limit timeout 60'), and cleared hung sessions. Free tunnel slots increased to 1,200, allowing branch tunnels to reconnect."
+    ],
+    "retrieved_teams": [
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "Network Ops"
+    ],
+    "generated_answer": "Root Cause: INC00530 (IPsec proxy-ID encryption domain mismatch dropping subnet traffic) and INC00542 (expired machine authentication cert causing tunnel failure). The Seattle branch's IPsec tunnel likely lacks proper encryption domain configuration for the inventory portal's subnet, combined with potential IKEv2 SA authentication issues similar to the expired cert incident.\nResolution: 1. Verify IPsec Phase 2 policy includes the inventory portal's subnet in both local/remote traffic selectors using 'show crypto ipsec sa'. 2. If missing, update the policy with 'set crypto ipsec policy <policy-name> <sequence-number> tunnel <local-subnet> <remote-subnet>'. 3. Clear stale SAs via 'clear crypto sa peer <peer-ip>'. 4. Check IKEv2 trust profiles for certificate validity using 'show crypto pki certificate chain' and renew if expired. 5. Monitor tunnel status with 'show crypto ipsec sa' to confirm traffic encryption.",
+    "structured": {
+      "predicted_team": "Network Ops",
+      "predicted_priority": "2 - High",
+      "routing_justification": "The issue involves IPsec tunnel configuration affecting specific subnet access, requiring network security expertise",
+      "incident_attribution": [
+        {
+          "id": "INC00530",
+          "team": "Network Ops",
+          "urgency": "2",
+          "impact": "2"
+        },
+        {
+          "id": "INC00542",
+          "team": "Network Ops",
+          "urgency": "1",
+          "impact": "1"
+        }
+      ]
+    },
+    "ragas_scores": {
+      "context_precision": 0.8874999999778125,
+      "context_recall": 1.0,
+      "faithfulness": 0.75,
+      "answer_relevancy": 0.6928298872359749
+    }
+  },
+  {
+    "index": 2,
+    "number": "TEST_INC003",
+    "query": "Internal DNS Resolution Failure for Payment Gateway Microservices. Payment processing pods in Kubernetes cluster prod-east are throwing 'EAI_AGAIN' and NXDOMAIN errors when resolving internal service endpoint payment-gateway.internal.corp. Direct IP pings to the pods succeed, but host lookups fail intermittently.. CoreDNS DNS resolution NXDOMAIN EAI_AGAIN Kubernetes Payment Gateway UDP buffer",
+    "ground_truth": "The root cause was CoreDNS upstream forwarder rate-limiting due to UDP port exhaustion on the primary internal resolver node. Resolved by auto-scaling CoreDNS replicas, configuring CoreDNS cache plugin with a 30-second TTL minimum, and directing upstream queries to redundant internal DNS servers.",
+    "ground_truth_team": "Network Ops",
+    "ground_truth_category": "Network",
+    "urgency": 1,
+    "impact": 1,
+    "retrieved_context_ids": [
+      "INC00771",
+      "INC00601",
+      "INC00602",
+      "INC00617",
+      "INC00546"
+    ],
+    "retrieved_contexts": [
+      "CoreDNS upstream UDP port exhaustion causing intermittent DNS resolution timeout for microservices. Payment processing pods in Kubernetes namespace payments reported intermittent DNS lookup timeouts and NXDOMAIN errors when querying external API endpoints such as api.stripe.com. Pod logs displayed dial tcp lookup api.stripe.com i/o timeout while internal cluster DNS remained partially functional.. Keywords: coredns, udp port exhaustion, dns timeout, kubernetes, cache plugin, upstream forwarder, nxdomain, microservices\nAffected Component: CoreDNS\nResolution: Diagnostics on CoreDNS metrics showed heavy UDP port allocation on the node's local resolver socket, causing CoreDNS upstream forwarder rate-limiting due to UDP port exhaustion on the primary internal resolver node. The engineer auto-scaled CoreDNS replicas from 2 to 6, configured the CoreDNS cache plugin with a 30-second TTL minimum in the Corefile, and directed upstream queries to redundant internal enterprise DNS servers. DNS query latency normalized to <2ms with zero timeouts.",
+      "CoreDNS crash-looping in Kubernetes cluster due to recursive query loop. Production Kubernetes cluster prod-east-01 experienced widespread DNS resolution failures across all microservice pods, halting payment processing and order ingestion.. Keywords: coredns, kubernetes, dns loop, kube-dns, resolv.conf, crashloopbackoff, microservice dns\nAffected Component: CoreDNS\nResolution: Inspecting pod logs via 'kubectl logs -n kube-system -l k8s-app=kube-dns' revealed fatal error 'plugin/loop: Loop (127.0.0.1:53 -> :53) detected'. A recent node resolv.conf update pointed upstream nameservers to local host IP (127.0.0.53), causing CoreDNS forwarding rules to recursively loop back onto itself until container memory exhausted. The engineer corrected the CoreDNS ConfigMap upstream forward block ('forward . 10.0.0.53 10.0.0.54') and restarted the CoreDNS deployment. Internal DNS queries resolved within 2ms, restoring cluster service communication.",
+      "Split-brain DNS zone transfer desync breaking payment gateway routing. Payment microservices reported intermittent host unreachable errors when calling internal gateway endpoint 'paygate.corp.internal', failing 50% of credit card transactions.. Keywords: split-brain dns, bind, zone transfer, axfr, tsig key, rndc, payment gateway\nAffected Component: Internal DNS\nResolution: Executing 'dig @ns1.corp.internal paygate.corp.internal' returned active IP 10.20.4.50, but query against secondary server 'dig @ns2.corp.internal' returned obsolete decommissioned IP 10.20.4.12. Review of BIND logs identified AXFR zone transfer failure code 'REFUSED' due to an expired TSIG key on ns2. The engineer synchronized the HMAC-SHA256 TSIG secret across both nameservers and executed 'rndc retransfer corp.internal' on ns2. The zone updated to serial 2024030701, restoring consistent DNS responses across both resolvers.",
+      "DNS negative caching storing NXDOMAIN responses for newly provisioned hosts. Developers deploying new microservice 'billing-api.corp.internal' could not resolve the hostname for 2 hours after adding the DNS record, while public DNS worked.. Keywords: negative caching, nxdomain, soa minimum ttl, dns cache flush, rndc flush, internal dns\nAffected Component: Internal DNS\nResolution: Diagnostics showed developers had queried the hostname before the DNS record was created, causing recursive resolvers to cache the NXDOMAIN (Non-Existent Domain) negative response. The SOA record had an excessive Negative Caching TTL (MINIMUM field) set to 7200 seconds (2 hours). The engineer cleared the resolver cache via 'rndc flushname billing-api.corp.internal' and reduced the SOA negative caching TTL to 300 seconds. Resolvers queried the authoritative source and returned the correct IP immediately.",
+      "Remote access VPN split-DNS failure preventing internal hostname resolution. Employees connected to the remote access VPN could access internal servers by IP address, but internal domain queries like 'gitlab.corp.internal' failed to resolve.. Keywords: split-dns, hostname resolution, scutil, internal domain, vpn client profile, dns servers\nAffected Component: GlobalProtect Gateway\nResolution: Diagnostics on client machines using 'scutil --dns' (macOS) and 'Resolve-DnsName' (Windows) showed that DNS requests for '.corp.internal' were being sent to public home Wi-Fi routers instead of corporate DNS. The VPN gateway split-DNS configuration was missing the internal DNS search domains. The engineer added 'corp.internal' and internal DNS server IPs (10.0.0.53, 10.0.0.54) to the gateway client network profile. Reconnecting clients resolved internal hostnames immediately."
+    ],
+    "retrieved_teams": [
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "Network Ops"
+    ],
+    "generated_answer": "Root Cause: Excessive Negative Caching TTL in SOA record (INC00617) causing NXDOMAIN responses for newly provisioned hosts despite valid DNS records. The MINIMUM field in the SOA record was set to 7200 seconds (2 hours), leading to persistent negative caching even after record creation.\nResolution: Flush the resolver cache for the affected domain using 'rndc flushname payment-gateway.internal.corp' and reduce the SOA record's negative caching TTL to 300 seconds by modifying the MINIMUM field in the zone file. Verify DNS propagation with 'dig +norec @ns1.corp.internal payment-gateway.internal.corp' and 'dig +norec @ns2.corp.internal payment-gateway.internal.corp'.",
+    "structured": {
+      "predicted_team": "Network Ops",
+      "predicted_priority": "2 - High",
+      "routing_justification": "The incident involves CoreDNS and DNS resolution failures impacting payment processing microservices, requiring Network Ops expertise in DNS configuration and caching mechanisms.",
+      "incident_attribution": [
+        {
+          "id": "INC00617",
+          "team": "Network Ops",
+          "urgency": "3",
+          "impact": "2"
+        }
+      ]
+    },
+    "ragas_scores": {
+      "context_precision": 0.999999999975,
+      "context_recall": 1.0,
+      "faithfulness": 0.6666666666666666,
+      "answer_relevancy": 0.6393008051926944
+    }
+  },
+  {
+    "index": 3,
+    "number": "TEST_INC004",
+    "query": "VPN disconnecting every 15 minutes. Remote employees connecting through GlobalProtect VPN get forcibly disconnected every 15 to 20 minutes and have to re-authenticate repeatedly.. GlobalProtect VPN disconnect Palo Alto Dead Peer Detection DPD session timeout remote access",
+    "ground_truth": "The root cause was an idle-timeout policy collision in the GlobalProtect gateway profile combined with an aggressive Dead Peer Detection (DPD) interval. Resolved by setting the GlobalProtect session timeout to 8 hours, increasing the DPD timeout to 60 seconds on the firewall, and deploying updated configs.",
+    "ground_truth_team": "Network Ops",
+    "ground_truth_category": "Network",
+    "urgency": 2,
+    "impact": 2,
+    "retrieved_context_ids": [
+      "INC00758",
+      "INC00527",
+      "INC00537",
+      "INC00534",
+      "INC00546"
+    ],
+    "retrieved_contexts": [
+      "GlobalProtect VPN session termination every 15 minutes due to DPD timeout. Remote engineering staff connecting to the corporate network via Palo Alto GlobalProtect VPN reported consistent disconnections every 15 minutes, interrupting database administration and remote SSH sessions.. Keywords: globalprotect, vpn disconnect, dpd, dead peer detection, palo alto, session timeout, keepalive, firewall, remote access\nAffected Component: VPN Concentrator\nResolution: Diagnostics on Palo Alto Firewall GlobalProtect gateway logs showed that aggressive Dead Peer Detection (DPD) with a 60-second timeout was terminating tunnels whenever home internet latency spikes delayed 3 consecutive keepalives. The engineer adjusted the gateway DPD hello interval to 30s / retry 5, relaxed the inactivity disconnect timeout, and pushed an updated client configuration. Remote connections remained stable across home broadband variations.",
+      "GlobalProtect VPN client disconnects due to DPD and idle timeout collision. Remote software engineers connecting via GlobalProtect VPN reported sudden disconnections every 15 minutes during active code reviews, followed by 30-second reconnection delays.. Keywords: globalprotect, dpd timeout, dead peer detection, vpn disconnect, idle timeout, palo alto firewall\nAffected Component: GlobalProtect Gateway\nResolution: Firewall logs on the Palo Alto gateway showed session terminations tagged as 'DPD timeout'. Investigation identified that the gateway's Dead Peer Detection (DPD) was set to an aggressive 10-second interval with 3 retries, colliding with an intermediate cloud NAT proxy that coalesced UDP keepalives. The engineer increased the DPD interval to 60 seconds, extended the client idle timeout from 15 minutes to 8 hours, and pushed the updated client profile. Remote disconnections dropped to zero across all regional endpoints.",
+      "GlobalProtect client IP pool exhaustion preventing remote logins. During an all-company remote work drill, over 200 employees reported error 'Virtual adapter setup failed' when attempting to connect to the GlobalProtect VPN.. Keywords: globalprotect, ip pool exhaustion, virtual adapter, client configuration, palo alto, remote workers\nAffected Component: GlobalProtect Gateway\nResolution: Checking the GlobalProtect gateway pool status revealed 100% allocation of the assigned /22 DHCP IP pool (10.120.0.0/22 - 1,022 addresses). The engineer expanded the virtual IP assignment pool by adding an adjacent /21 subnet block (10.120.8.0/21) under Network > GlobalProtect > Gateways > Client Configuration > Network Settings. The configuration was committed, and queued remote users connected immediately with valid IP addresses.",
+      "Dynamic VTI IPsec session exhaustion caused by stale zombie client sessions. Remote branch offices were unable to establish dynamic IPsec tunnels to the corporate hub, receiving 'Resource temporarily unavailable' error messages.. Keywords: vti, session exhaustion, zombie sessions, crypto session-limit, ike delete, tunnel limit\nAffected Component: VPN Concentrator\nResolution: Diagnostics via 'show crypto session summary' indicated 2048 active sessions, reaching the hardware platform's licensed limit. Review of the session table revealed hundreds of orphaned sessions from laptops that disconnected ungracefully without sending IKE Delete payloads. The engineer reduced the DPD idle timeout to 30 seconds, enabled aggressive session cleanup ('crypto session-limit timeout 60'), and cleared hung sessions. Free tunnel slots increased to 1,200, allowing branch tunnels to reconnect.",
+      "Remote access VPN split-DNS failure preventing internal hostname resolution. Employees connected to the remote access VPN could access internal servers by IP address, but internal domain queries like 'gitlab.corp.internal' failed to resolve.. Keywords: split-dns, hostname resolution, scutil, internal domain, vpn client profile, dns servers\nAffected Component: GlobalProtect Gateway\nResolution: Diagnostics on client machines using 'scutil --dns' (macOS) and 'Resolve-DnsName' (Windows) showed that DNS requests for '.corp.internal' were being sent to public home Wi-Fi routers instead of corporate DNS. The VPN gateway split-DNS configuration was missing the internal DNS search domains. The engineer added 'corp.internal' and internal DNS server IPs (10.0.0.53, 10.0.0.54) to the gateway client network profile. Reconnecting clients resolved internal hostnames immediately."
+    ],
+    "retrieved_teams": [
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "Network Ops"
+    ],
+    "generated_answer": "Root Cause: INC00758 (aggressive DPD 60s timeout colliding with home internet latency) and INC00527 (DPD 10s interval collision with cloud NAT proxy) both show DPD timeout misconfiguration causing 15-minute session termination.  \nResolution: Adjust Palo Alto GlobalProtect gateway DPD hello interval to 30s / retry 5 (from INC00758), increase idle timeout to 8 hours (from INC00527), and ensure no intermediate NAT devices coalescing UDP keepalives. Push updated client configuration to refresh sessions.",
+    "structured": {
+      "predicted_team": "Network Ops",
+      "predicted_priority": "2 - High",
+      "routing_justification": "DPD timeout issues directly impact VPN connectivity stability requiring network infrastructure tuning",
+      "incident_attribution": [
+        {
+          "id": "INC00758",
+          "team": "Network Ops",
+          "urgency": "2",
+          "impact": "2"
+        },
+        {
+          "id": "INC00527",
+          "team": "Network Ops",
+          "urgency": "2",
+          "impact": "2"
+        },
+        {
+          "id": "INC00537",
+          "team": "Network Ops",
+          "urgency": "1",
+          "impact": "1"
+        },
+        {
+          "id": "INC00534",
+          "team": "Network Ops",
+          "urgency": "1",
+          "impact": "2"
+        },
+        {
+          "id": "INC00546",
+          "team": "Network Ops",
+          "urgency": "2",
+          "impact": "2"
+        }
+      ]
+    },
+    "ragas_scores": {
+      "context_precision": 0.8874999999778125,
+      "context_recall": 1.0,
+      "faithfulness": 0.5555555555555556,
+      "answer_relevancy": 0.6212485389056904
+    }
+  },
+  {
+    "index": 4,
+    "number": "TEST_INC005",
+    "query": "SSL Handshake Failure on Ingress Gateway for Merchant Onboarding API. External merchant systems attempting to upload batch registration data via https://api.merchant-onboard.com are receiving SSL_ERROR_SYSCALL and TLS handshake timeout errors. F5 BIG-IP load balancer shows a spike in unfinished client handshakes.. SSL handshake TLS 1.3 F5 BIG-IP certificate chain load balancer Merchant Onboarding API cipher suite",
+    "ground_truth": "The root cause was an incomplete intermediate CA certificate chain on the Ingress VIP SSL Client Profile and an unoptimized TLS 1.3 cipher suite negotiation. Resolved by bundling the DigiCert Intermediate CA with the server certificate on the F5 profile, updating cipher suites, and verifying handshake completion.",
+    "ground_truth_team": "Network Ops",
+    "ground_truth_category": "Network",
+    "urgency": 1,
+    "impact": 2,
+    "retrieved_context_ids": [
+      "INC00752",
+      "INC00619",
+      "INC00212",
+      "INC00531",
+      "INC00606"
+    ],
+    "retrieved_contexts": [
+      "Ingress Gateway VIP TLS handshake failure due to missing DigiCert Intermediate CA bundle. External merchant systems uploading batch onboarding data via Ingress HTTPS endpoints reported SSL_ERROR_SYSCALL and TLS handshake timeouts. F5 BIG-IP load balancer logged excessive unfinished client handshakes and unrecognized certificate authority errors.. Keywords: ssl handshake, tls 1.3, f5 big-ip, digicert, intermediate ca, certificate chain, load balancer, ingress gateway, cipher suite\nAffected Component: Load Balancer\nResolution: Testing via 'openssl s_client -connect api.merchant-onboard.com:443 -showcerts' identified that the F5 BIG-IP SSL Client Profile was configured with only the leaf server certificate without the DigiCert Intermediate CA bundle, causing mobile and external clients to terminate TLS 1.3 negotiation. The engineer downloaded the DigiCert Global Root G2 Intermediate certificate, concatenated it into a complete PEM bundle, bound the bundle to the Client SSL Profile, and optimized cipher suites to modern TLS 1.3 specs. Handshakes completed cleanly with zero SSL errors.",
+      "F5 BIG-IP SSL cipher suite incompatibility dropping TLS 1.3 mobile apps. Mobile application users on iOS 17 and Android 14 reported connection failures when logging into the retail banking portal, with apps displaying network error.. Keywords: f5 big-ip, tls 1.3, cipher suite, client ssl profile, handshake failure, mobile app\nAffected Component: Load Balancer VIP\nResolution: SSL handshake inspection with 'openssl s_client -connect api.bank.com:443 -tls1_3' returned handshake failure alert 40. The F5 Client SSL profile was restricted to legacy TLS 1.2 RSA cipher suites, lacking support for modern elliptic curve Diffie-Hellman TLS 1.3 ciphers (TLS_AES_256_GCM_SHA384). The engineer updated the Client SSL profile to enable TLS 1.3, enabled ECDSA certificates alongside RSA, and applied cipher group 'DEFAULT:!3DES:!RC4'. Mobile application logins succeeded instantly.",
+      "Unable to link new location to existing merchant ID. Some merchants receive authentication errors when attempting to log in to the Customer UI to review and e-sign the Merchant Agreement, preventing access to the document.. Keywords: authentication, load balancer, authentication service, timeout, rate limiting, network, health check, scaling\nAffected Component: Authentication Service\nResolution: The incident was caused by a misconfigured load balancer and an overloaded authentication service, leading to intermittent timeouts and authentication errors for merchants attempting to access the Customer UI. The root cause was identified through a structured diagnostic approach. First, the network engineers executed a series of diagnostic commands such as `tcpdump` on the load balancer to capture and analyze traffic patterns, revealing that the authentication service was receiving an excessive number of requests during peak login hours. They also checked the authentication service logs using `journalctl -u authentication-service` and found numerous '503 Service Unavailable' errors, indicating backend overload. Additionally, the team used Wireshark to inspect the network packets and confirmed that the load balancer was not correctly distributing the traffic across the authentication service nodes. To resolve the issue, the load balancer configuration was updated to implement a more efficient round-robin algorithm with health checks enabled. The authentication service was scaled horizontally by adding two additional nodes, and the connection pool size was increased to handle the higher load. Furthermore, the team implemented rate limiting to prevent excessive login attempts from a single source. These changes were deployed during a maintenance window, and post-deployment, the authentication service was monitored using Prometheus and Grafana to ensure stability. Merchants were able to access the Customer UI without timeouts, and the authentication errors were resolved.",
+      "SSL-VPN client authentication failure due to expired intermediate CA. Remote users logging into the corporate SSL-VPN portal received 'Certificate validation failed: Issuer untrusted' errors, preventing 450 remote workers from establishing sessions.. Keywords: ssl-vpn, intermediate ca, certificate validation, trust chain, openssl, handshake failure\nAffected Component: VPN Concentrator\nResolution: Analysis of the SSL-VPN gateway certificate store showed that the Intermediate Certificate Authority bundle had expired at 00:00 UTC. The engineer imported the renewed DigiCert Intermediate CA certificate into the gateway trust-chain via the administrative CLI ('crypto ca trustpool import') and bound the updated bundle to the SSL profile. SSL handshake validation was confirmed using 'openssl s_client -connect vpn.company.com:443', and remote worker logins restored immediately.",
+      "NGINX SSL reverse proxy SNI mismatch dropping multi-tenant connections. Customers visiting enterprise partner portal 'partner.company.com' received SSL handshake error 'SSL_ERROR_UNRECOGNIZED_NAME_ALERT' in their web browsers.. Keywords: nginx, sni mismatch, ssl handshake, reverse proxy, proxy_ssl_server_name, multi-tenant\nAffected Component: NGINX Load Balancer\nResolution: Inspection of NGINX reverse proxy error logs showed 'upstream SSL certificate verify failed' during client handshakes. The upstream backend cluster hosted multiple tenant domains, but the NGINX upstream proxy configuration was missing 'proxy_ssl_server_name on', failing to transmit Server Name Indication (SNI) to the backend. The engineer added 'proxy_ssl_server_name on' and 'proxy_ssl_name $host' to the location block, followed by 'nginx -s reload'. Handshakes completed cleanly with matching tenant SSL certificates."
+    ],
+    "retrieved_teams": [
+      "Network Ops",
+      "Network Ops",
+      "IT Support",
+      "Network Ops",
+      "Network Ops"
+    ],
+    "generated_answer": "Root Cause: INC00752 (missing DigiCert Intermediate CA bundle in F5 BIG-IP SSL Client Profile) and INC00531 (expired intermediate CA certificate validation failure). Both incidents show that incomplete or expired certificate chains cause TLS 1.3 handshake failures with external clients, resulting in SSL_ERROR_SYSCALL and unfinished handshakes.\nResolution: 1. Use 'openssl s_client -connect api.merchant-onboard.com:443 -showcerts' to verify certificate chain completeness. 2. Download DigiCert Global Root G2 Intermediate certificate. 3. Concatenate intermediate certificate to existing PEM bundle. 4. Update F5 BIG-IP SSL Client Profile with complete certificate chain. 5. Enable TLS 1.3 cipher suites (e.g., TLS_AES_256_GCM_SHA384) via cipher group 'DEFAULT:!3DES:!RC4'. 6. Test connectivity with 'openssl s_client -connect api.merchant-onboard.com:443 -tls1_3'.",
+    "structured": {
+      "predicted_team": "Network Ops",
+      "predicted_priority": "1 - Critical",
+      "routing_justification": "SSL handshake failure on F5 BIG-IP load balancer impacting external merchant services requires immediate network operations intervention",
+      "incident_attribution": [
+        {
+          "id": "INC00752",
+          "team": "Network Ops",
+          "urgency": "1",
+          "impact": "2"
+        },
+        {
+          "id": "INC00531",
+          "team": "Network Ops",
+          "urgency": "1",
+          "impact": "1"
+        }
+      ]
+    },
+    "ragas_scores": {
+      "context_precision": 0.9166666666361111,
+      "context_recall": 1.0,
+      "faithfulness": 0.8181818181818182,
+      "answer_relevancy": 0.7638924455789872
+    }
+  },
+  {
+    "index": 5,
+    "number": "TEST_INC006",
+    "query": "Slow internet and dropped calls in Building B 3rd Floor. Multiple users on the 3rd floor of Building B complain that Microsoft Teams calls are robotic, breaking up, and dropping every few minutes. Speedtest shows high jitter.. Wi-Fi wireless jitter Aruba AP co-channel interference channel utilization Teams calls AirWave",
+    "ground_truth": "The root cause was severe co-channel Wi-Fi interference on 5GHz channels caused by overlapping access point radio coverage and high channel saturation. Resolved by enabling Dynamic Channel Allocation (DCA) on the wireless controller, reducing AP transmit power, and optimizing 5GHz channel distribution.",
+    "ground_truth_team": "Network Ops",
+    "ground_truth_category": "Network",
+    "urgency": 3,
+    "impact": 2,
+    "retrieved_context_ids": [
+      "INC00772",
+      "INC00579",
+      "INC00511",
+      "INC00553",
+      "INC00398"
+    ],
+    "retrieved_contexts": [
+      "5GHz high-density Wi-Fi co-channel interference causing packet loss and VoIP call dropouts. Employees on Building B 3rd Floor reported severe audio dropouts and call disconnects during Microsoft Teams video meetings despite full Wi-Fi signal strength bars on laptops. Network monitoring showed high packet jitter and 22% frame retransmissions.. Keywords: 5ghz, co-channel interference, wifi, dynamic channel allocation, dca, teams call drop, transmit power, wlc\nAffected Component: Wireless LAN Controller\nResolution: RF spectrum analysis on the Cisco Catalyst 9800 WLC revealed severe co-channel Wi-Fi interference on 5GHz channels (channels 36 and 40) exceeding 65% channel utilization caused by overlapping access point radio coverage and high channel saturation. The engineer enabled Dynamic Channel Allocation (DCA) with 20MHz channel width, reduced AP transmit power levels from 20 dBm to 14 dBm across Building B 3rd floor, and optimized 5GHz channel distribution. Wi-Fi channel utilization dropped to 18% with zero dropped calls.",
+      "Co-channel interference on 2.4GHz band due to excessive AP transmit power. Users in open-plan office space reported sluggish internet speeds (under 2Mbps) on 2.4GHz legacy devices despite sitting directly underneath an access point.. Keywords: co-channel interference, 2.4ghz, transmit power control, tpc, rrm, rf survey, channel utilization\nAffected Component: Access Point\nResolution: RF spectrum survey using Ekahau and WLC telemetry ('show ap auto-rf 802.11b') showed Co-Channel Interference (CCI) exceeding 65% with signal overlap from four adjacent APs broadcasting at maximum power (30mW/15dBm). The engineer enabled Transmit Power Control (TPC) under RRM with a threshold of -70 dBm and disabled 2.4GHz radios on every second AP to establish a dual-band microcell design. 2.4GHz channel utilization dropped from 88% to 22%, increasing throughput to 45Mbps.",
+      "BGP community tag stripping across MPLS provider causing traffic reroute. Corporate voice traffic between Chicago and Dallas offices routed over the public internet rather than the dedicated MPLS WAN, causing jitter and dropped calls.. Keywords: bgp community, send-community, mpls, qos, jitter, voice traffic, customer edge\nAffected Component: Edge Router\nResolution: Inspection of BGP route advertisements with 'show ip bgp neighbor 10.254.1.1 advertised-routes' showed that custom QoS community tags (65000:100) were stripped because 'neighbor 10.254.1.1 send-community' was missing on the customer edge router. The engineer enabled community transmission on the peer configuration. The MPLS provider correctly prioritized the tagged prefixes, routing voice back onto the dedicated low-jitter circuit.",
+      "Switchport err-disable state triggered by BPDU Guard on user wall jack. A developer in Building B reported complete network loss on their workstation after connecting an unmanaged desktop switch to test multiple hardware devices.. Keywords: bpdu guard, err-disable, portfast, unmanaged switch, access port, spanning-tree\nAffected Component: Access Switch\nResolution: Checking 'show interfaces status err-disabled' identified port Gi1/0/9 in error-disabled state with reason 'bpduguard'. The user's unmanaged desktop switch transmitted Spanning Tree BPDUs into a port configured with PortFast and BPDU Guard. The engineer informed the user of corporate network policy prohibiting unmanaged switches, disconnected the unauthorized hub, and issued 'shutdown' followed by 'no shutdown' on Gi1/0/9. The port re-enabled in full-duplex Gigabit mode.",
+      "Network connectivity issue preventing location addition. Intermittent latency spikes were observed, causing delays in API responses during merchant data input by Sales Agents. This variability in response times impacted the overall speed of onboarding operations.. Keywords: network latency, api connectivity, nic failure, qos configuration, packet loss, traceroute, mtr, network monitoring\nAffected Component: Network Infrastructure\nResolution: Upon initial assessment of the incident, the IT Support team identified that the intermittent latency spikes were primarily impacting the Sales Agent's device network connectivity, specifically during API interactions required for merchant data input. The first step in the resolution process was to perform a thorough network diagnostic to isolate the root cause. Using the `ping` and `traceroute` commands, we tested connectivity to the backend API endpoints and observed inconsistent latency values between 200-800 ms during peak usage periods. Further investigation revealed that the Sales Agent's device was experiencing packet loss and jitter, which was confirmed using the `mtr` tool, which provided a detailed view of the network path and identified a bottleneck at the local network gateway. The team then conducted a deep dive into the device's network configuration, checking for any misconfigured Quality of Service (QoS) settings or firewall rules that could be affecting traffic prioritization. No misconfigurations were found. The next step was to perform a hardware inspection of the Sales Agent's device, which revealed that the network interface card (NIC) was experiencing intermittent failures, likely due to overheating and physical wear. To resolve this, the malfunctioning NIC was replaced with a high-performance, enterprise-grade model, which significantly reduced latency to below 50 ms. Additionally, the team implemented a network monitoring solution using PRTG Network Monitor to continuously track latency and packet loss metrics, ensuring early detection of similar issues in the future. The Sales Agent was also provided with updated network drivers and a script to periodically check for connectivity issues using `curl` and `ping` commands, which would automatically alert the IT team if any anomalies were detected. These measures ensured seamless continuation of the merchant data input process and restored the required network performance for onboarding operations."
+    ],
+    "retrieved_teams": [
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "IT Support"
+    ],
+    "generated_answer": "Root Cause: Co-channel interference on 5GHz channels (channels 36 and 40) exceeding 65% channel utilization due to overlapping access point radio coverage and high channel saturation (INC00772).  \nResolution: Enable Dynamic Channel Allocation (DCA) with 20MHz channel width on the Aruba APs, reduce AP transmit power levels from 20 dBm to 14 dBm across Building B 3rd floor, and optimize 5GHz channel distribution using AirWave for real-time spectrum analysis. Verify channel utilization drops below 18% and confirm zero dropped calls via Wi-Fi diagnostics.",
+    "structured": {
+      "predicted_team": "Network Ops",
+      "predicted_priority": "2 - High",
+      "routing_justification": "The issue involves wireless LAN controller interference and VoIP quality degradation, which are within Network Ops' expertise for wireless infrastructure troubleshooting.",
+      "incident_attribution": [
+        {
+          "id": "INC00772",
+          "team": "Network Ops",
+          "urgency": "2",
+          "impact": "2"
+        }
+      ]
+    },
+    "ragas_scores": {
+      "context_precision": 0.99999999995,
+      "context_recall": 1.0,
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.5025031416221045
+    }
+  },
+  {
+    "index": 6,
+    "number": "TEST_INC007",
+    "query": "Outbound Webhook Delivery Blocked by Perimeter Firewall Rule. Automated webhook events notifying partner banking networks of completed transactions are failing with connection timeout (SYN_SENT without SYN-ACK). Internal queue is backing up past 15,000 unacknowledged messages.. webhook firewall rule Fortinet egress filtering SYN_SENT Payment Gateway partner bank",
+    "ground_truth": "The root cause was a recent perimeter firewall policy push that omitted the partner bank's new CIDR block from the outbound egress rules, causing TCP SYN timeouts. Resolved by adding the CIDR range to the egress firewall whitelist, re-establishing sessions, and draining the webhook queue.",
+    "ground_truth_team": "Network Ops",
+    "ground_truth_category": "Network",
+    "urgency": 1,
+    "impact": 1,
+    "retrieved_context_ids": [
+      "INC00118",
+      "INC00775",
+      "INC00010",
+      "INC00773",
+      "INC00197"
+    ],
+    "retrieved_contexts": [
+      "Payment terminal integration failure during merchant setup. While submitting location data for a merchant ID, a sudden network outage occurred, interrupting the data transmission process. This outage impacted the Sales Agent's ability to finalize the onboarding for the merchant, causing delays and data loss.. Keywords: network, firewall, latency, packet loss, load balancer, payment gateway, api, firewall rules\nAffected Component: Payment Gateway\nResolution: The incident was traced to a network outage that occurred during the transmission of location data for merchant onboarding, which disrupted the Payment Gateway integration process. The root cause was identified as a transient network latency issue between the merchant's onboarding server and the Payment Gateway API endpoint. To resolve the issue, the following steps were executed: 1) Network diagnostics were performed using the `traceroute` and `mtr` commands to analyze latency and packet loss between the merchant's server and the Payment Gateway's API endpoint. 2) The `tcpdump` tool was used to capture and analyze network traffic, revealing intermittent packet loss and reordering. 3) The `ping` command was utilized to measure latency, showing a spike in round-trip time (RTT) during the data submission phase. 4) The Payment Gateway's API endpoint was tested using `curl` with verbose output, which confirmed that the request was being received but the response was not being properly acknowledged due to a misconfigured firewall rule on the server. 5) The firewall rules were updated to allow traffic on the required port (e.g., port 443 for HTTPS) and to prioritize traffic from the merchant's onboarding server. 6) A temporary workaround was implemented by redirecting the request through a redundant network path using a load balancer, which improved reliability during the resolution process. 7) The Payment Gateway integration was retested using automated smoke tests and integration tests to ensure that the data transmission process was stable and reliable. The fix involved ensuring that the network infrastructure could handle the required throughput and that the firewall rules were configured to allow uninterrupted communication between the onboarding server and the Payment Gateway API. Additionally, a monitoring alert was set up using Prometheus and Grafana to track network latency and packet loss in real-time, preventing similar incidents in the future.",
+      "AWS NAT Gateway SNAT port exhaustion causing connection timeouts to external payment APIs. Microservices running in private AWS subnets failed to connect to external banking gateway APIs, logging 'connection timed out' and 'dial tcp: address already in use'. Outbound HTTPS requests to payment providers were failing intermittently under load.. Keywords: snat, nat gateway, port exhaustion, aws, connection pooling, payment api, elastic ip, connection timeout\nAffected Component: NAT Gateway\nResolution: CloudWatch metrics showed ErrorPortAllocation at 100% on the primary AWS NAT Gateway. The root cause was SNAT port exhaustion on the NAT Gateway pool because thousands of concurrent microservice HTTP requests were opening short-lived connections without TCP connection reuse. The engineer allocated two secondary Elastic IPs to the NAT Gateway pool to expand available SNAT ports, and updated application HTTP client configurations with persistent connection pooling and keepalive timeouts. Outbound connection failures dropped to zero.",
+      "Fees/services configuration not saving. Sales Agent reported inability to load Sales UI when onboarding a new merchant, impacting multiple ongoing merchant registrations.. Keywords: network, firewall, https, routing, firewall rule, outbound traffic, sales ui\nAffected Component: Network Infrastructure\nResolution: The incident was caused by a misconfigured network routing rule that was inadvertently blocking outbound HTTPS traffic to the Sales UI application hosted on the cloud platform. To resolve this, we first performed a network packet capture using Wireshark on the Sales Agent's endpoint to confirm that traffic to the Sales UI domain was being dropped at the network layer. We then checked the firewall rules in the network infrastructure using the 'iptables -L -n' command and identified a misconfigured rule that was blocking traffic on port 443. After removing the conflicting rule, we tested connectivity by performing a curl -vk https://salesui.example.com request, which returned a 200 OK response. We also verified that the Sales UI was accessible via a browser by having the Sales Agent attempt to load the interface again, which was successful. Finally, we implemented a temporary workaround by adding a static route to the Sales UI's IP range in the routing table to prevent future disruptions. The root cause was a recent network policy change that inadvertently affected the Sales UI's accessibility.",
+      "Nginx ingress proxy buffer exhaustion returning HTTP 502 Bad Gateway on large webhook payloads. During peak marketing promotional flash sales, external payment provider webhooks received HTTP 502 Bad Gateway when sending notification payloads to the payment webhook listener service. Webhook ingestion traffic spiked from 200 req/s to 4,500 req/s.. Keywords: nginx, proxy buffer, 502 bad gateway, webhook, proxy_buffer_size, payload header, flash sale, load balancer\nAffected Component: NGINX Load Balancer\nResolution: Nginx reverse proxy error logs showed 'upstream sent too big header while reading response header from upstream' and worker process file descriptor exhaustion. The root cause was Nginx proxy buffer exhaustion caused by large JSON payload headers exceeding default buffer sizes and hitting max open file descriptor limits during high traffic. The engineer tuned Nginx configuration with 'proxy_buffer_size 128k', 'proxy_buffers 4 256k', and 'proxy_busy_buffers_size 256k', increased worker_connections to 16384, and reloaded Nginx. Webhook delivery succeeded with 100% 200 OK responses.",
+      "Error saving merchant data in Sales UI. Merchants facing frequent network timeout errors while submitting data, leading to delays in onboarding process.. Keywords: database, connection pool, retry mechanism, exponential backoff, blue-green deployment, elk stack, prometheus, grafana\nAffected Component: Merchant Onboarding Service\nResolution: The incident was resolved through a multi-step diagnostic and remediation process. Initial analysis revealed that the network timeout errors were occurring during the POST /api/v1/merchants endpoint call when submitting merchant data. The IT support team first validated the issue by replicating the error in a staging environment using curl commands: curl -X POST https://sales-ui.prod.example.com/api/v1/merchants -H 'Content-Type: application/json' -d '{\"merchant_id\": \"M12345\", \"fee\": 2.50}'. The response was a 503 Service Unavailable error with the message 'Backend service timeout'. This indicated a problem with the backend service handling the request. The team then checked the application logs using the ELK stack (Elasticsearch, Logstash, Kibana) and found that the Sales UI was correctly routing the request to the Merchant Onboarding Service (MOS), but the MOS was timing out when attempting to write to the database. Further investigation into the MOS logs revealed that the database connection pool was exhausted, leading to connection timeouts. The root cause was identified as an unhandled exception in the MOS when processing large merchant data payloads, which caused the service to hang and consume all available database connections. To resolve this, the IT support team implemented a fix in the MOS to handle exceptions during database writes and introduced a retry mechanism with exponential backoff. Additionally, the database connection pool size was increased from 50 to 100 connections. These changes were deployed via a blue-green deployment to minimize downtime. Post-deployment, the team monitored the system using Prometheus and Grafana, confirming that the timeout errors were resolved and the service was processing requests within acceptable latency thresholds."
+    ],
+    "retrieved_teams": [
+      "IT Support",
+      "Network Ops",
+      "IT Support",
+      "Network Ops",
+      "IT Support"
+    ],
+    "generated_answer": "Root Cause: INC00775 (SNAT port exhaustion due to misconfigured egress filtering) and INC00118 (firewall rule blocking required port) both show firewall-related network latency and connection timeouts. The current incident aligns with these patterns, where Fortinet egress filtering is blocking SYN packets to the Payment Gateway partner bank, causing SYN_SENT without SYN-ACK errors.\nResolution: 1) Verify Fortinet firewall rules allow outbound traffic on port 443 (HTTPS) to the Payment Gateway partner bank's IP range. 2) Check for SNAT port exhaustion by reviewing AWS NAT Gateway metrics (if applicable) and allocate additional Elastic IPs if needed. 3) Test connectivity using `curl -vk https://<partner-bank-domain>` to confirm traffic is not blocked. 4) Temporarily adjust firewall policies to prioritize payment webhook traffic using QoS rules. 5) Monitor SYN_SENT rates via Wireshark or packet capture tools to validate resolution.",
+    "structured": {
+      "predicted_team": "Network Ops",
+      "predicted_priority": "2 - High",
+      "routing_justification": "The issue involves perimeter firewall configuration affecting outbound network traffic to a critical payment service",
+      "incident_attribution": [
+        {
+          "id": "INC00775",
+          "team": "Network Ops",
+          "urgency": "1",
+          "impact": "1"
+        },
+        {
+          "id": "INC00118",
+          "team": "IT Support",
+          "urgency": "2",
+          "impact": "1"
+        },
+        {
+          "id": "INC00773",
+          "team": "Network Ops",
+          "urgency": "1",
+          "impact": "1"
+        },
+        {
+          "id": "INC00010",
+          "team": "IT Support",
+          "urgency": "3",
+          "impact": "1"
+        }
+      ]
+    },
+    "ragas_scores": {
+      "context_precision": 0.9999999999666667,
+      "context_recall": 0.0,
+      "faithfulness": 0.2727272727272727,
+      "answer_relevancy": 0.6379913541143484
+    }
+  },
+  {
+    "index": 7,
+    "number": "TEST_INC008",
+    "query": "Switch stack offline in Distribution Center 4. Core access switch stack in DC-4 warehouse went unreachable at 03:00. Warehouse barcode scanners and shipping label printers cannot connect to the LAN.. Cisco switch StackWise stack split PoE warehouse network offline hardware failure",
+    "ground_truth": "The root cause was a stack split caused by a faulty StackWise flex-cable between switch stack members, leading to election failure and port isolation. Resolved by replacing the damaged StackWise cable, restoring stack synchronization, and recovering all warehouse access ports.",
+    "ground_truth_team": "Network Ops",
+    "ground_truth_category": "Hardware",
+    "urgency": 1,
+    "impact": 1,
+    "retrieved_context_ids": [
+      "INC00751",
+      "INC00404",
+      "INC00598",
+      "INC00592",
+      "INC00572"
+    ],
+    "retrieved_contexts": [
+      "Cisco StackWise switch stack split and flex-cable failure in distribution warehouse. Core access switch stack in DC-4 logistics warehouse went unreachable during early morning operations. Barcode scanners and shipping label printers dropped off the network. Monitoring reported switch stack election failure and member isolation.. Keywords: cisco switch, stackwise, stack split, stack-ring, poe, switch stack, flex-cable, member isolation, hardware failure\nAffected Component: Network Infrastructure\nResolution: Diagnostics via 'show switch', 'show switch stack-ring detail', and 'show switch stack-ports' revealed that member 2 and member 3 lost communication due to a damaged StackWise flex-cable, causing a dual-master stack split. The engineer replaced the damaged StackWise flex-cable, verified stack-ring redundancy with full 32Gbps bandwidth restored, and configured 'switch 1 priority 15' to ensure deterministic stack master election. All access ports and warehouse clients reconnected with zero errors.",
+      "Unable to select equipment for merchant. Intermittent network connectivity issues are disrupting the Merchant's ability to smoothly review the agreement on the Customer UI, causing delays and frustration.. Keywords: qos, network latency, traceroute, firewall rules, pos terminal, dns resolution, jmeter, network infrastructure\nAffected Component: Network Infrastructure\nResolution: The incident was resolved through a systematic approach that began with identifying the root cause of the intermittent network connectivity issues affecting the Merchant's ability to review the agreement on the Customer UI. Initial diagnostic steps included monitoring network latency and packet loss using tools such as ping, traceroute, and Wireshark to capture and analyze traffic patterns. The team observed increased latency between the merchant's POS terminal and the Customer UI server, which was confirmed by running the 'mtr' command to trace the network path and identify potential bottlenecks. Additionally, the team checked the firewall rules and QoS (Quality of Service) configurations to ensure that traffic related to the Customer UI was prioritized. Logs from the network infrastructure, including Cisco ASA firewall logs and Juniper SRX logs, were reviewed for any anomalies or blocking rules. The analysis revealed that the issue stemmed from misconfigured QoS policies on the core router, which were inadvertently throttling the traffic between the POS terminals and the Customer UI server. To resolve this, the QoS policies were reconfigured to ensure that traffic associated with the Customer UI was assigned higher priority, and the bandwidth allocation was adjusted to accommodate peak usage periods. Furthermore, the team performed a thorough check of the POS terminal configurations, ensuring that the network settings (IP address, subnet mask, gateway) were correctly aligned with the network infrastructure. The team also validated the DNS resolution by using the 'nslookup' command to confirm that the Customer UI server's domain name was resolving to the correct IP address. Finally, the solution was tested by simulating high-traffic scenarios using JMeter to ensure that the network could handle the load without degradation in performance. The reconfiguration of the QoS policies and the validation of network settings ensured that the Merchant could smoothly review the agreement on the Customer UI without experiencing intermittent connectivity issues.",
+      "PoE power budget exhaustion causing AP radio reboot under full load. Access point ap-fl2-east spontaneously rebooted whenever more than 25 clients connected simultaneously, dropping all users.. Keywords: poe power, 802.3at, poe+ brownout, ap reboot, power inline, wifi 6 ap, access switch\nAffected Component: Access Point\nResolution: Checking switch port power telemetry via 'show power inline Gi1/0/12' showed the switch delivering legacy 802.3af power (15.4W). When client load increased, the dual-radio 4x4 Wi-Fi 6 AP exceeded the 15.4W threshold and triggered a brownout reboot. The switch stack power budget was constrained. The engineer reallocated PoE priority, enabled 802.3at PoE+ (30W) on the interface, and deployed a PoE+ injector. The AP drew 22.4W under peak load with zero reboots.",
+      "Hidden node collision in logistics warehouse causing high packet retries. Forklift-mounted terminals in aisle 14 of the distribution center reported extreme input lag when scanning pallet barcodes, with retry counters reaching 48%.. Keywords: hidden node, rts cts, packet retries, warehouse wifi, rf collision, access point\nAffected Component: Access Point\nResolution: A physical RF survey identified that tall metal racking blocked line-of-sight between terminals at opposite ends of the aisle, causing both to transmit simultaneously without carrier-sense detection (hidden node problem). The engineer lowered the RTS/CTS (Request to Send / Clear to Send) threshold from default 2347 bytes to 500 bytes on the warehouse 5GHz radio profile ('config wlan rts-threshold 500 3'). Collision-induced packet retries dropped from 48% to under 4%, eliminating scanner lag.",
+      "PortFast enabled on inter-switch trunk link causing loop during reboot. When distribution switch sw-dist-02 was rebooted during maintenance, a temporary bridging loop formed on the network for 30 seconds, bringing down core routing.. Keywords: portfast trunk, bridging loop, spanning-tree, loop guard, inter-switch link, core switch\nAffected Component: Core Switch\nResolution: Reviewing port configurations on trunk interface Te1/0/1 showed 'spanning-tree portfast trunk' configured mistakenly on an inter-switch uplink. PortFast bypassed listening and learning states, immediately transitioning the trunk to forwarding before BPDUs could be exchanged to detect loops. The engineer removed PortFast from all inter-switch trunks using 'no spanning-tree portfast' and enabled Spanning Tree Loop Guard. Subsequent switch reboots converged without transient loops."
+    ],
+    "retrieved_teams": [
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "Network Ops"
+    ],
+    "generated_answer": "Root Cause: INC00751 (Cisco StackWise flex-cable damage causing dual-master stack split) and INC00598 (PoE power budget constraints exacerbating switch stack instability). The damaged StackWise flex-cable in DC-4 caused communication loss between switch members, while PoE power limitations on the same switch stack likely contributed to the failure cascade.\nResolution: 1. Verify stack status with 'show switch stack-ring detail' and 'show switch stack-ports' to confirm member isolation. 2. Physically inspect and replace the damaged StackWise flex-cable. 3. Reconfigure stack priorities using 'switch 1 priority 15' to ensure deterministic master election. 4. Monitor power telemetry with 'show power inline' to ensure PoE+ (802.3at) is enabled on all connected ports. 5. Validate stack-ring redundancy with 'show switch stack-ring' to confirm 32Gbps bandwidth restoration.",
+    "structured": {
+      "predicted_team": "Network Ops",
+      "predicted_priority": "1 - Critical",
+      "routing_justification": "Switch stack split and PoE-related hardware failure directly impact critical network infrastructure with full warehouse LAN outage",
+      "incident_attribution": [
+        {
+          "id": "INC00751",
+          "team": "Network Ops",
+          "urgency": "1",
+          "impact": "1"
+        },
+        {
+          "id": "INC00598",
+          "team": "Network Ops",
+          "urgency": "2",
+          "impact": "2"
+        }
+      ]
+    },
+    "ragas_scores": {
+      "context_precision": 0.99999999995,
+      "context_recall": 1.0,
+      "faithfulness": 0.42857142857142855,
+      "answer_relevancy": 0.6778609449960314
+    }
+  },
+  {
+    "index": 8,
+    "number": "TEST_INC009",
+    "query": "DHCP Pool Exhaustion in Guest Wi-Fi and Staging VLAN. Newly provisioned merchant POS demo units in the staging lab are failing to obtain IP addresses, displaying 169.254.x.x APIPA addresses. DHCP server logs indicate no available leases in Scope 10.45.20.0/24.. DHCP IP pool exhaustion APIPA Infoblox VLAN lease time staging POS",
+    "ground_truth": "The root cause was an unreleased 7-day DHCP lease duration on VLAN 20 which exhausted all available IP leases due to rapid test device turnover. Resolved by expanding the DHCP scope subnet from /24 to /23, reducing the lease duration to 4 hours, and clearing expired leases.",
+    "ground_truth_team": "Network Ops",
+    "ground_truth_category": "Network",
+    "urgency": 2,
+    "impact": 3,
+    "retrieved_context_ids": [
+      "INC00608",
+      "INC00759",
+      "INC00558",
+      "INC00603",
+      "INC00584"
+    ],
+    "retrieved_contexts": [
+      "Guest Wi-Fi DHCP pool exhaustion due to excessive 72-hour lease duration. Visitors attending a 2-day tech conference in the corporate auditorium could not acquire IP addresses on the guest network, with devices displaying 'No Internet Connection'.. Keywords: dhcp pool exhaustion, lease time, guest wifi, infoblox, stale lease, ip address pool\nAffected Component: DHCP Server\nResolution: Review of the Infoblox DHCP scope for Guest VLAN 150 (172.20.0.0/22 - 1,022 addresses) showed 100% utilization with 0 available leases. The default lease time was mistakenly configured for 72 hours (3 days), retaining stale leases for visitors who had already departed. The engineer reduced the DHCP lease duration to 4 hours ('lease 14400') and purged inactive offline leases older than 2 hours. Over 650 IP addresses were immediately returned to the pool, allowing attendees to connect.",
+      "DHCP scope exhaustion on staging and guest VLANs blocking new device leases. New IoT barcode scanners and staging workstations in production staging facility failed to obtain IP addresses, falling back to 169.254.x.x link-local addresses. DHCP server rejected discovery requests with 'Scope full'.. Keywords: dhcp, scope exhaustion, apipa, lease duration, vlan, ip address pool, staging network, broadcast\nAffected Component: Network Infrastructure\nResolution: Inspection of Windows DHCP server statistics ('Get-DhcpServerv4Scope -ScopeId 10.100.20.0') showed 100% address utilization due to an overly long 7-day lease time for transient mobile devices. The engineer purged inactive and expired leases, reduced the lease duration to 4 hours for the staging VLAN, and expanded the subnet allocation from /24 to /22 (1,020 usable hosts). Devices immediately acquired valid DHCP leases.",
+      "DHCP Snooping untrusted port dropping legitimate DHCP offers. Newly onboarded workstations in the accounting department (VLAN 40) failed to obtain IP addresses, assigning themselves 169.254.x.x APIPA addresses.. Keywords: dhcp snooping, dhcp offer dropped, apipa, trusted port, vlan 40, access switch, ip lease\nAffected Component: Access Switch\nResolution: Switch logs showed '%DHCP_SNOOPING-5-DHCP_OFFER_DROPPED' on trunk port Gi1/0/48. DHCP Snooping was enabled globally, but the uplink port to the distribution layer was not marked as a trusted interface, causing the switch to drop all inbound DHCP OFFER packets from the central DHCP server. The engineer configured 'ip dhcp snooping trust' on trunk port Gi1/0/48. Workstations successfully received valid DHCP leases on VLAN 40 within 30 seconds.",
+      "DHCP relay IP helper address omission preventing client IP leasing. Workstations deployed on newly created engineering VLAN 75 received 169.254.x.x APIPA addresses, completely unable to communicate on the campus network.. Keywords: dhcp relay, ip helper-address, apipa, svi, vlan 75, infoblox, broadcast forwarding\nAffected Component: Core Switch\nResolution: Diagnostics on core switch sw-core-01 using 'show ip interface Vlan75' showed the Switched Virtual Interface (SVI) active, but 'Helper-address is not set'. Because DHCP requests are broadcast frames (255.255.255.255), routers dropped them at the Layer 3 boundary. The engineer added 'ip helper-address 10.10.1.15' and 'ip helper-address 10.10.1.16' (pointing to redundant Infoblox DHCP servers) under interface Vlan75. Workstations received valid DHCP lease configurations immediately.",
+      "AP management subnet DHCP pool exhaustion blocking new AP onboarding. Ten newly mounted Wi-Fi 6 access points in the manufacturing wing failed to power on their network interfaces, remaining stuck with blinking red LEDs.. Keywords: dhcp pool exhaustion, ap management, dhcp option 43, lightweight ap, vlan 100, access point\nAffected Component: Access Point\nResolution: Inspection of the core DHCP server for VLAN 100 (AP Management) showed 100% address utilization (254 of 254 leases assigned). The engineer expanded the DHCP scope from a /24 to a /23 subnet (10.100.0.0/23), updating the access switch SVI secondary address. The new access points acquired valid IP addresses, discovered the WLC via DHCP Option 43, downloaded current firmware, and entered operational broadcasting mode."
+    ],
+    "retrieved_teams": [
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "Network Ops"
+    ],
+    "generated_answer": "Root Cause: INC00608 (72-hour lease duration causing stale leases) and INC00759 (7-day lease time for transient devices) both showed DHCP scope exhaustion due to overly long lease times retaining inactive leases. The current incident mirrors these patterns with 100% utilization in Scope 10.45.20.0/24.\nResolution: 1. Verify lease duration via 'lease <lease_time>' command on Infoblox DHCP server for VLAN 10.45.20.0/24. 2. Purge expired leases using 'purge leases older than <threshold>' command. 3. Reduce lease time to 4 hours ('lease 14400') as done in INC00608 and INC00759. 4. Check subnet size; if needed, expand scope as in INC00759 from /24 to /22 for increased capacity.",
+    "structured": {
+      "predicted_team": "Network Ops",
+      "predicted_priority": "2 - High",
+      "routing_justification": "The issue involves DHCP configuration and scope exhaustion, which are handled by Network Ops as seen in INC00608, INC00759, and INC00584.",
+      "incident_attribution": [
+        {
+          "id": "INC00608",
+          "team": "Network Ops",
+          "urgency": "2",
+          "impact": "2"
+        },
+        {
+          "id": "INC00759",
+          "team": "Network Ops",
+          "urgency": "2",
+          "impact": "2"
+        },
+        {
+          "id": "INC00558",
+          "team": "Network Ops",
+          "urgency": "2",
+          "impact": "2"
+        },
+        {
+          "id": "INC00603",
+          "team": "Network Ops",
+          "urgency": "2",
+          "impact": "2"
+        },
+        {
+          "id": "INC00584",
+          "team": "Network Ops",
+          "urgency": "2",
+          "impact": "2"
+        }
+      ]
+    },
+    "ragas_scores": {
+      "context_precision": 0.8666666666377778,
+      "context_recall": 0.0,
+      "faithfulness": 0.2857142857142857,
+      "answer_relevancy": 0.5397452441857363
+    }
+  },
+  {
+    "index": 9,
+    "number": "TEST_INC010",
+    "query": "Large File Data Sync Fails Over MPLS Due to Path MTU Black Hole. Database backup replication between Dallas DC and Chicago DR site stalls indefinitely whenever packet payloads exceed 1460 bytes. Small ICMP pings succeed, but large rsync transfers freeze at 0% after initial handshake.. MPLS Path MTU MSS clamping ICMP black hole data replication database sync fragmentation",
+    "ground_truth": "The root cause was ICMP Type 3 Code 4 (Fragmentation Needed) packets being dropped by transit routers, causing Path MTU Discovery (PMTUD) to fail over the MPLS link. Resolved by configuring 'ip tcp adjust-mss 1360' on MPLS WAN interfaces on both endpoint routers.",
+    "ground_truth_team": "Network Ops",
+    "ground_truth_category": "Network",
+    "urgency": 2,
+    "impact": 2,
+    "retrieved_context_ids": [
+      "INC00753",
+      "INC00502",
+      "INC00521",
+      "INC00519",
+      "INC00629"
+    ],
+    "retrieved_contexts": [
+      "Path MTU Discovery black-hole dropping large database replication packets over MPLS. Inter-datacenter database backup replication and rsync transfers across the secondary MPLS circuit stalled indefinitely when packet payloads exceeded 1460 bytes. Small ICMP pings succeeded, but database sync sessions hung at 0% after initial TCP handshake.. Keywords: mpls, path mtu, mss clamping, icmp black hole, data replication, database sync, fragmentation, pmtud, packet loss\nAffected Component: WAN Circuit\nResolution: Network engineers ran 'ping -s 1472 -M do 10.200.1.1' which failed, pinpointing an MTU black-hole where transit routers silently dropped packets exceeding path MTU without returning ICMP Type 3 Code 4 (Fragmentation Needed) packets. The engineer applied TCP MSS clamping via 'ip tcp adjust-mss 1360' on both MPLS endpoint sub-interfaces and enabled Path MTU Discovery. Retesting confirmed 100% transmission of 1500-byte packets and sustained multi-gigabit replication throughput.",
+      "MTU black-holing on secondary WAN circuit causing large packet drops. Branch offices connected across the secondary WAN link reported intermittent SSH and HTTPS connection freezes, while basic ICMP pings succeeded. Traffic monitoring showed 15% packet loss on packets larger than 1400 bytes.. Keywords: mtu black hole, tcp mss, packet loss, wan circuit, pmtud, fragmentation, interface\nAffected Component: WAN Circuit\nResolution: The network team ran 'ping -s 1472 -M do 10.200.1.1' which failed, pinpointing an MTU black-hole where transit routers silently dropped packets exceeding path MTU without sending ICMP Fragmentation Needed packets. The engineer applied TCP MSS clamping via 'ip tcp adjust-mss 1360' on the transit interface and enabled Path MTU Discovery. Retesting confirmed 100% transmission for 1500-byte packets and resolved application session stalling.",
+      "Jumbo frame MTU mismatch on data center interconnect causing BGP sync drops. BGP EVPN peering between DC-East and DC-West spine switches flapped during large database replication synchronization, dropping cross-DC microservices.. Keywords: jumbo frames, mtu 9216, bgp evpn, data center interconnect, update drop, fragmentation\nAffected Component: Core Switch\nResolution: Diagnostics showed BGP open and keepalive packets passing, but large BGP Update messages exceeding 1500 bytes dropped across the provider dark-fiber link. The dark-fiber circuit was configured for 1500 bytes while switch interfaces had 'mtu 9216'. The engineer standardized the interface MTU to 9100 across all transit switches and configured path MTU discovery. Large BGP EVPN update frames traversed without fragmentation, stabilizing the EVPN fabric.",
+      "Route redistribution metric type inconsistency causing suboptimal WAN path. Production database backup transfers between Dallas and Atlanta routed over a slow 100Mbps backup circuit instead of the high-speed 1Gbps primary line.. Keywords: ospf metric type, redistribution, e1 vs e2, suboptimal routing, wan link, cost metric\nAffected Component: Core Router\nResolution: Inspection of OSPF database revealed that routes redistributed from BGP were injected as Type-2 (E2) external metrics on the primary router, ignoring internal path costs. The engineer modified the redistribution configuration to Metric Type 1 ('redistribute bgp 65001 metric-type 1 subnets'). OSPF routers dynamically accounted for internal link metrics, steering traffic back onto the 1Gbps primary circuit.",
+      "Spine-leaf underlay MTU mismatch causing VXLAN encapsulated packet drops. Large database queries and file syncs between datacenter clusters timed out, while standard ping and small HTTP transactions succeeded.. Keywords: vxlan mtu, jumbo frames, underlay network, encapsulation overhead, spine-leaf, packet drops\nAffected Component: Core Switch\nResolution: Packet trace on the spine switch interconnects revealed that VXLAN encapsulation adds 50 bytes of overhead (Outer Ethernet, IP, UDP, and VXLAN headers). When host VMs transmitted standard 1500-byte packets, encapsulated frames reached 1550 bytes. Intermediate underlay spine links were configured with standard MTU 1500 rather than jumbo frames, dropping the packets silently. The engineer enabled jumbo MTU 9216 across all physical spine-leaf underlay interfaces and port-channels. Large payload transfers completed with 0% packet loss."
+    ],
+    "retrieved_teams": [
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "Network Ops",
+      "Network Ops"
+    ],
+    "generated_answer": "Root Cause: INC00753 and INC00502 both identified MTU black-holes where transit routers silently dropped packets exceeding 1460 bytes without returning ICMP Fragmentation Needed packets, causing database replication stalls. INC00521 and INC00629 also showed MTU mismatches leading to packet drops, though in different contexts (BGP vs VXLAN).\nResolution: Run 'ping -s 1472 -M do <remote_ip>' to confirm MTU black-hole. Apply TCP MSS clamping via 'ip tcp adjust-mss 1360' on MPLS endpoint sub-interfaces. Enable Path MTU Discovery. Verify 1500-byte packet transmission success before resuming large transfers.",
+    "structured": {
+      "predicted_team": "Network Ops",
+      "predicted_priority": "1 - Critical",
+      "routing_justification": "WAN circuit MTU black-hole affecting critical database replication requires immediate network ops intervention",
+      "incident_attribution": [
+        {
+          "id": "INC00753",
+          "team": "Network Ops",
+          "urgency": "1",
+          "impact": "2"
+        },
+        {
+          "id": "INC00502",
+          "team": "Network Ops",
+          "urgency": "2",
+          "impact": "2"
+        },
+        {
+          "id": "INC00521",
+          "team": "Network Ops",
+          "urgency": "1",
+          "impact": "1"
+        },
+        {
+          "id": "INC00519",
+          "team": "Network Ops",
+          "urgency": "2",
+          "impact": "2"
+        },
+        {
+          "id": "INC00629",
+          "team": "Network Ops",
+          "urgency": "2",
+          "impact": "2"
+        }
+      ]
+    },
+    "ragas_scores": {
+      "context_precision": 0.94999999997625,
+      "context_recall": 1.0,
+      "faithfulness": 0.25,
+      "answer_relevancy": 0.7079441835942876
+    }
+  },
+  {
+    "index": 10,
+    "number": "TEST_INC011",
+    "query": "Sales Manager Missing Elevated Approver Permissions in CRM Module. Newly promoted Regional Sales Manager cannot approve merchant fee waivers exceeding $5,000 in Salesforce/CRM. System throws 'Permission Denied: Insufficient Privileges to Execute Action' upon clicking Approve.. CRM Salesforce permission denied RBAC Okta approver rights fee waiver",
+    "ground_truth": "The root cause was that the user's Okta SAML claims group mapping was not synchronized with the CRM 'Tier-2 Approver' permission set following their promotion. Resolved by updating the user's Active Directory security group membership, triggering an Okta SCIM directory sync, and verifying the approval workflow.",
+    "ground_truth_team": "IT Support",
+    "ground_truth_category": "Access",
+    "urgency": 2,
+    "impact": 2,
+    "retrieved_context_ids": [
+      "INC00762",
+      "INC00077",
+      "INC00223",
+      "INC00167",
+      "INC00427"
+    ],
+    "retrieved_contexts": [
+      "Okta SAML claims group attribute out of sync blocking CRM elevated approver permissions. Newly promoted Regional Sales Manager was unable to approve merchant fee waivers exceeding $5,000 in CRM/Salesforce. Clicking 'Approve' threw 'Permission Denied: Insufficient Privileges to Execute Action'.. Keywords: crm, salesforce, permission denied, rbac, okta, saml, approver rights, scim sync, fee waiver, active directory\nAffected Component: CRM\nResolution: Audited Okta SAML 2.0 application claims and Active Directory security groups. Discovered that the user had been added to the AD group 'CRM-Tier2-Approvers', but an Okta SCIM sync interruption prevented the SAML group claim attribute from synchronizing into Salesforce. The technician triggered an Okta SCIM directory delta sync, confirmed the SAML assertion contained 'CRM-Tier2-Approvers' under group attributes, and verified the user successfully executed the fee waiver approval.",
+      "Access denied error when trying to submit merchant data. Certain sales agents are facing an access permission error that is blocking them from configuring fees and services for specific merchants. This issue is hindering the customization of service offerings.. Keywords: rbac, acl, permscan, rbac_policy, authentication_service, role_based_access, permission_denied, 403_forbidden\nAffected Component: Authentication Service\nResolution: The access permission error was resolved through a systematic diagnostic and remediation process. Initial investigation involved checking the access control lists (ACLs) for the merchant configuration module using the 'getacl -m merchant_config' command, which revealed restrictive permissions on the /var/www/merchant_portal/config directory. The error logs from the application server indicated a '403 Forbidden' status code when attempting to POST requests to /api/merchant/fee_config. Further analysis using the 'auditlog -s auth_service' command showed that the sales agents' user accounts were not being granted the 'merchant_fee_configure' role during the authentication flow. The root cause was identified as misconfigured role-based access control (RBAC) policies in the Authentication Service, specifically within the 'rbac_policy.json' file. The solution involved updating the RBAC policy to include the necessary permissions for the sales agents' user group, ensuring they had 'read-write' access to the fee configuration endpoints. Additionally, a permissions audit was conducted using the 'permscan -m merchant_portal' tool to verify compliance with the organization's security policies. The fix was implemented via a deployment to the staging environment, followed by a rollback to the previous version if any issues arose. Post-implementation, a regression test was performed using automated scripts to validate that the sales agents could now successfully configure fees and services without encountering access denials.",
+      "Access permission error preventing merchant fee configuration. Sales Agents reported missing equipment options in the selection dropdown menu, limiting their ability to choose the appropriate devices for merchants.. Keywords: rbac, acl, crm, permissions, audit logs, access control, role-based access\nAffected Component: CRM\nResolution: The incident was resolved through a systematic diagnostic and remediation process. Initial investigation revealed that the Sales Agents were encountering a 'Permission Denied' error when attempting to configure merchant service fees. The root cause was identified as an incorrect access control configuration within the CRM system's role-based access control (RBAC) framework. Diagnostic steps included reviewing the Sales Agent's user profile in the CRM system, checking the associated role permissions, and verifying the access control lists (ACLs) for the merchant configuration module. Using the CRM's built-in audit logs, we traced the access attempts and confirmed the lack of required permissions for the 'Configure Merchant Fees' action. The resolution involved updating the Sales Agent's role to include the necessary permissions, which was accomplished via the CRM's administrative console. Additionally, we performed a permissions audit for all users with similar roles to ensure no other users were affected. The onboarding process for the affected merchant was resumed once the permissions were corrected, allowing the Sales Agent to proceed with the fee configuration without encountering the access error. To prevent recurrence, we implemented a review schedule for access control configurations and integrated automated monitoring to detect permission discrepancies in real-time.",
+      "Fee Configuration Permission Denial for New Sales Agent. A critical failure in configuring service fees by a Sales Agent has caused all merchant accounts to reflect incorrect service charges. Financial discrepancies detected.. Keywords: rbac, access control, crm, permission denial, role-based access, fee configuration, audit logs, rbac policy\nAffected Component: Authentication Service\nResolution: The incident was caused by a critical bug in the access control module of the CRM system, specifically within the fee configuration permissions logic. The Sales Agent was unable to configure service fees due to a misconfigured role-based access control (RBAC) rule that incorrectly denied permissions for the 'Fee Configuration' action. The diagnostic process began with reviewing the audit logs in the CRM system, which showed a series of 'Permission Denied' entries when the Sales Agent attempted to modify fee configurations. Using the CRM's built-in access control audit tools, we identified that the 'Sales Agent' role was missing the necessary 'Fee Configuration' permission in the RBAC policy. Further investigation revealed that the RBAC policy was incorrectly configured to restrict all non-admin users from accessing the fee configuration interface, which was a result of a recent code deployment that inadvertently altered the access control logic. To resolve the issue, we rolled back the recent RBAC policy update and restored the previous configuration, ensuring that the 'Sales Agent' role had the correct permissions. Additionally, we implemented a temporary workaround by adding a check in the fee configuration service to bypass the RBAC check for users with the 'Sales Agent' role, while a permanent fix was being developed. The permanent fix involved refactoring the RBAC policy to correctly assign permissions based on user roles, ensuring that the 'Sales Agent' role had the necessary access to configure service fees. We also conducted a code review of the RBAC module to prevent similar issues in the future. The resolution was verified by testing the fee configuration process with a test Sales Agent account, which successfully configured service fees without encountering permission denials.",
+      "Sales UI not loading merchant data. Certain sales agents are facing an access permission error that is blocking them from configuring fees and services for specific merchants. This issue is hindering the customization of service offerings.. Keywords: rbac, authentication service, fee calculation, role-based access, session token, permission error, user roles\nAffected Component: Authentication Service\nResolution: The issue with the Sales UI not loading merchant data was resolved through a structured diagnostic and remediation process. The initial step involved isolating the problem by verifying if the issue was specific to certain users or environments. This was done by checking the access logs of the Sales UI application, which revealed that the affected sales agents were encountering a 403 Forbidden error when attempting to access merchant configuration endpoints. Further investigation into the application's backend logs indicated that the error was related to role-based access control (RBAC) misconfigurations in the Authentication Service. The Authentication Service was responsible for validating the users' permissions against the required roles for accessing merchant data. Upon closer inspection, it was found that the fee calculation algorithm had a bug that caused it to incorrectly assign permissions to certain users, leading to the access permission error. To resolve this, the team first patched the fee calculation algorithm in the Sales UI backend service, ensuring that the correct permissions were assigned based on user roles. After the patch was deployed, the system was put through a series of regression tests to validate that the fee calculations were accurate and that the RBAC configurations were correctly enforced. Additionally, the team conducted a full system health check, including reviewing the Authentication Service's configuration and ensuring that all role-based access controls were properly aligned with the current user permissions. The resolution also included updating the access control policies to prevent similar issues in the future, ensuring that any changes to the fee calculation logic would not inadvertently affect user permissions. Finally, the Sales UI was reloaded, and the affected users were notified to reauthenticate to ensure their session tokens were refreshed, which resolved the access permission error and restored full functionality for configuring fees and services for specific merchants."
+    ],
+    "retrieved_teams": [
+      "IT Support",
+      "IT Support",
+      "IT Support",
+      "IT Support",
+      "IT Support"
+    ],
+    "generated_answer": "Root Cause: INC00762 identified that Okta SCIM sync interruptions prevented SAML group claims from synchronizing to Salesforce, causing missing RBAC permissions for CRM elevated approvers. INC00167 corroborated RBAC misconfigurations in access control logic affecting fee waiver approvals.\nResolution: 1. Verify Okta SCIM sync status via Okta admin console 2. Trigger directory delta sync using Okta API endpoint /api/v1/entitlements/sync 3. Confirm SAML assertion contains 'CRM-Tier2-Approvers' group attribute 4. Validate Salesforce user permissions via 'Get User Permissions' API 5. Re-sync AD group memberships using Azure AD Connect if applicable",
+    "structured": {
+      "predicted_team": "IT Support",
+      "predicted_priority": "2 - High",
+      "routing_justification": "Access control issue impacting CRM approval workflows requiring IT Support expertise in Okta/AD integration",
+      "incident_attribution": [
+        {
+          "id": "INC00762",
+          "team": "IT Support",
+          "urgency": "2",
+          "impact": "2"
+        },
+        {
+          "id": "INC00167",
+          "team": "IT Support",
+          "urgency": "2",
+          "impact": "3"
+        }
+      ]
+    },
+    "ragas_scores": {
+      "context_precision": 0.7555555555303703,
+      "context_recall": 1.0,
+      "faithfulness": 0.3,
+      "answer_relevancy": 0.6052575891218136
+    }
+  },
+  {
+    "index": 11,
+    "number": "TEST_INC012",
+    "query": "Screen goes white when signing agreement. Merchant called in stating that whenever they click the final submit button on the e-signature tablet, the whole page turns blank white and nothing happens. No confirmation email is received.. e-signature white screen tablet merchant agreement JavaScript error CSRF token browser cache",
+    "ground_truth": "The root cause was a corrupt local browser cache and localStorage state on the merchant tablet's WebView app colliding with a new CSRF token validation script. Resolved by clearing browser cache/storage, updating the web application bundle, and regenerating a fresh e-signature session token.",
+    "ground_truth_team": "IT Support",
+    "ground_truth_category": "Software",
+    "urgency": 2,
+    "impact": 2,
+    "retrieved_context_ids": [
+      "INC00763",
+      "INC00441",
+      "INC00379",
+      "INC00454",
+      "INC00378"
+    ],
+    "retrieved_contexts": [
+      "Merchant agreement e-sign WebView white screen caused by corrupted localStorage and CSRF token collision. Merchant onboarding agents using company-issued tablets reported that tapping 'Sign & Submit Agreement' on customer tablets produced a completely blank white screen. No confirmation email or agreement PDF was generated.. Keywords: e-signature, white screen, tablet, merchant agreement, javascript error, csrf token, browser cache, localstorage, webview\nAffected Component: Web Application\nResolution: Remote browser inspection of the tablet WebView console revealed an unhandled JavaScript exception: stale JSON in 'window.localStorage' collided with an updated CSRF token validation script in the web application bundle. The technician cleared the tablet application cache and localStorage via MDM configuration profile, deployed the updated webview bundle (v3.4.1), and verified successful e-signature submission and PDF generation.",
+      "Equipment Compatibility Issue. Upon successful login, the Merchant encounters a blank screen instead of the expected Merchant Agreement review interface.. Keywords: authentication, session, token, ui, browser, javascript, clock drift, ntp\nAffected Component: Authentication Service\nResolution: The incident was resolved by systematically addressing potential causes of the UI rendering failure following a successful login. The initial diagnostic step involved verifying the browser console for JavaScript errors, which revealed a 403 Forbidden error when attempting to load the Merchant Agreement review interface. This indicated an authentication token validation issue. The IT Support team then checked the session management logs on the authentication service, identifying a mismatch between the token's issued time and the server's clock, suggesting a clock drift problem. To resolve this, the system was restarted to clear any stale session tokens and refresh the authentication state. Additionally, the team ensured that the server's time synchronization was verified using the `ntpq -p` command, confirming the NTP service was correctly aligned with the time server. The restart also cleared temporary UI cache issues, allowing the merchant to access the agreement review interface and complete the e-signature process.",
+      "PDF not loading for Merchant Agreement review. Upon successful login, the Merchant encounters a blank screen instead of the expected Merchant Agreement review interface.. Keywords: browser, session, javascript, compatibility, developer tools, data integrity, frontend, authentication\nAffected Component: Authentication Service\nResolution: The incident was initiated by the merchant encountering a blank screen upon accessing the Merchant Agreement review interface. The root cause was identified as a browser compatibility issue, specifically with the unsupported browser version being used. The resolution process began with verifying the browser version and checking for any known compatibility issues with the platform's frontend framework. The IT support team executed the following steps: 1. Advised the Sales Agent to switch to a supported browser (e.g., Chrome 115 or Firefox 110). 2. Performed a session diagnostic using the browser's developer tools to inspect for JavaScript errors, which revealed a 'ReferenceError' related to a missing library in the unsupported browser. 3. Conducted a session freeze and thaw cycle to clear temporary session data and ensure the application could re-establish a stable session. 4. Verified data integrity by checking the database records for the merchant agreement and confirming that the data was intact and accessible. 5. Suggested a browser upgrade for future stability, as the unsupported browser lacked critical security patches and modern JavaScript engine optimizations. 6. Monitored the session for any residual issues and confirmed that the interface loaded correctly after the browser change. 7. Documented the incident in the ITSM system for future reference and to improve browser compatibility documentation.",
+      "Blank screen encountered post-login during agreement review. Upon successful login, the Merchant encounters a blank screen instead of the expected Merchant Agreement review interface.. Keywords: browser, cache, cookies, session, authentication, pdf, mime type\nAffected Component: Authentication Service\nResolution: The incident was resolved through a systematic approach that began with verifying the user's browser environment. The first step involved checking the browser's cache and cookies, which were cleared using the browser's built-in settings or via command-line tools such as 'chrome://settings/clearBrowserData' for Chrome or 'about:preferences#privacy' for Firefox. The user was instructed to clear the cache and cookies, then to restart the browser and attempt the login process again. If the issue persisted, the next diagnostic step was to inspect the browser's developer console (F12) for any JavaScript errors or network-related issues. This revealed potential problems with loading the PDF document or rendering the interface, which could be due to corrupted session data or misconfigured browser settings. To further isolate the issue, the user was directed to disable browser extensions that might interfere with the login process or page rendering. Additionally, the IT support team checked the server-side logs for the authentication service to identify if there were any errors related to session creation or PDF generation. The logs indicated that the session was being created successfully, but the PDF was not being rendered correctly, possibly due to a misconfigured MIME type or an issue with the PDF generation service. As a result, the user was advised to clear the browser cache and cookies, refresh the page, and ensure that the browser was up to date. The resolution confirmed that clearing the cache and cookies resolved the issue, allowing the PDF to load correctly and the Merchant Agreement review interface to display as expected. The support team also recommended regular maintenance of browser settings and periodic checks for browser updates to prevent similar issues in the future.",
+      "Merchant UI displaying blank screen post-login. Sales Agent experiences an issue where the submission button for the Merchant Agreement e-signature is unclickable, preventing progress to the processing stage.. Keywords: session, timeout, authentication, session management, tcp keepalive, e-signature, load testing, blue-green deployment\nAffected Component: Authentication Service\nResolution: Upon investigation, the root cause was identified as a misconfigured session timeout parameter within the Authentication Service, which was causing the UI to lose session context after login. The Sales Agent's session was being prematurely terminated due to the timeout threshold being set to 5 minutes, while the e-signature workflow required a minimum of 10 minutes to complete. To resolve this, the session timeout was adjusted to 15 minutes in the authentication service configuration file (auth-service.properties), and the session management module was updated to handle extended sessions gracefully. Additionally, the application server's session replication mechanism was configured to synchronize session data across all nodes to prevent session loss during load spikes. The network timeout issue was also addressed by optimizing the TCP keepalive settings on the backend servers, increasing the timeout threshold from 30 seconds to 2 minutes using the net.ipv4.tcp_keepalive_time parameter. This change ensured that the UI remained responsive during prolonged interactions. The fix was validated through automated regression tests, including simulated e-signature workflows and load testing with JMeter to ensure stability under high traffic. Finally, the incident was resolved by deploying the updated configuration to the production environment via a blue-green deployment strategy, minimizing downtime and ensuring zero service disruption."
+    ],
+    "retrieved_teams": [
+      "IT Support",
+      "IT Support",
+      "IT Support",
+      "IT Support",
+      "IT Support"
+    ],
+    "generated_answer": "Root Cause: INC00763 (corrupted localStorage colliding with CSRF token validation script) and INC00454 (browser cache corruption causing PDF rendering failure). The white screen occurs due to stale JSON in localStorage conflicting with updated CSRF token validation, combined with browser cache issues preventing proper rendering of the e-signature interface.\nResolution: 1. Clear tablet application cache and localStorage via MDM configuration profile as done in INC00763. 2. Deploy updated webview bundle (v3.4.1) to resolve CSRF token collision. 3. Instruct user to clear browser cache and cookies using chrome://settings/clearBrowserData or about:preferences#privacy (as per INC00454). 4. Verify JavaScript console for errors and ensure browser is up-to-date. 5. If issue persists, perform session freeze/thaw cycle and check server-side logs for session management anomalies.",
+    "structured": {
+      "predicted_team": "IT Support",
+      "predicted_priority": "2 - High",
+      "routing_justification": "The issue involves browser cache corruption, CSRF token validation conflicts, and JavaScript errors - common web application problems requiring IT Support expertise.",
+      "incident_attribution": [
+        {
+          "id": "INC00763",
+          "team": "IT Support",
+          "urgency": "2",
+          "impact": "2"
+        },
+        {
+          "id": "INC00441",
+          "team": "IT Support",
+          "urgency": "2",
+          "impact": "3"
+        },
+        {
+          "id": "INC00379",
+          "team": "IT Support",
+          "urgency": "2",
+          "impact": "2"
+        },
+        {
+          "id": "INC00454",
+          "team": "IT Support",
+          "urgency": "2",
+          "impact": "1"
+        },
+        {
+          "id": "INC00378",
+          "team": "IT Support",
+          "urgency": "3",
+          "impact": "1"
+        }
+      ]
+    },
+    "ragas_scores": {
+      "context_precision": 0.999999999975,
+      "context_recall": 1.0,
+      "faithfulness": 0.9230769230769231,
+      "answer_relevancy": 0.701369593577442
+    }
+  },
+  {
+    "index": 12,
+    "number": "TEST_INC013",
+    "query": "Repeated Active Directory Account Lockout for POS Provisioning Service Account. The dedicated service account svc-pos-provision gets locked out in Active Directory every 30 minutes, halting automated terminal configuration for newly registered retail merchants.. Active Directory account lockout Event ID 4740 service account credential manager POS provisioning",
+    "ground_truth": "The root cause was a decommissioned staging server that still had a scheduled task running with cached, expired credentials for svc-pos-provision, causing repeated bad password attempts against the Domain Controller. Resolved by locating the source workstation via Event ID 4740, disabling the orphaned scheduled task, and unlocking the account.",
+    "ground_truth_team": "IT Support",
+    "ground_truth_category": "Access",
+    "urgency": 1,
+    "impact": 2,
+    "retrieved_context_ids": [
+      "INC00657",
+      "INC00282",
+      "INC00191",
+      "INC00054",
+      "INC00306"
+    ],
+    "retrieved_contexts": [
+      "Active Directory account lockout loop from stale Windows Credential Manager. Marketing Director's Active Directory account locked out every 15 minutes automatically, even after IT Support reset the password multiple times.. Keywords: account lockout, event 4740, credential manager, active directory, stale credentials, lockout loop\nAffected Component: Active Directory\nResolution: Domain controller security audit logs (Event ID 4740) showed caller computer name as the user's desktop workstation. Investigation identified an old mapped network drive script and Microsoft Outlook storing an expired password in Windows Credential Manager under 'Windows Credentials > Generic Credentials'. The technician unlocked the account via Active Directory Users and Computers (ADUC), navigated to Credential Manager, deleted the stale cached entries, and re-authenticated Outlook with the current password. Account lockouts ceased completely.",
+      "Login credentials not working for merchant. Sales Agent encountered an issue where a specific POS terminal model, 'ABC-2000', could not be selected while configuring equipment for a merchant.. Keywords: pos terminal, authentication, session token, terminal logs, credential validation, auth_service, merchant_credentials\nAffected Component: Authentication Service\nResolution: The incident was resolved by systematically diagnosing and addressing the issue with the POS terminal model 'ABC-2000' during the merchant onboarding process. Initial troubleshooting began with verifying the terminal's compatibility with the current system configuration. The team executed a series of diagnostic commands, including checking the terminal's firmware version using the command 'get_terminal_version' and ensuring it matched the supported version listed in the system's compatibility matrix. The logs from the terminal's communication interface were analyzed using the 'tail -f /var/log/terminal_logs' command, which revealed an authentication error related to the merchant's credentials. Further investigation showed that the POS terminal's authentication service was failing to validate the merchant's login credentials due to a misconfigured session token expiration setting. To resolve this, the team adjusted the session token expiration parameter in the 'auth_config.json' file, setting it to a higher value of 3600 seconds (60 minutes). Additionally, the terminal's authentication service was restarted using the command 'sudo systemctl restart auth_service' to apply the changes. The team also implemented a script to automatically validate the terminal's credentials during the onboarding process, which checks the 'merchant_credentials' table in the database for valid entries and ensures the terminal's configuration aligns with the merchant's profile. These changes were tested in a staging environment before deployment to ensure stability and prevent future occurrences of the issue.",
+      "Login credentials not working for merchant. Sales Agent faced intermittent network disconnections during equipment selection, causing data loss and frustration; Sales Agent affected.. Keywords: network, dns, authentication, pos, terminal, login, connectivity, session\nAffected Component: Authentication Service\nResolution: The incident was resolved through a systematic approach that began with isolating the root cause of the login credential issue. The Sales Agent reported intermittent network disconnections during equipment selection, which led to data loss and frustration. The first step was to verify the network connectivity by checking the status of the POS terminal's network interface using the `ipconfig` command on Windows or `ifconfig` on Linux. The output showed that the POS terminal was experiencing intermittent connectivity issues with the backend authentication service. The IT Support team then performed a packet capture using Wireshark to analyze the network traffic and identified that the terminal was unable to establish a stable connection to the authentication service due to a misconfigured DNS resolver. The team then executed a DNS lookup using the `nslookup` command and found that the terminal was resolving the domain name to an incorrect IP address. To resolve this, the DNS settings were corrected, and the terminal's network configuration was updated. Additionally, the team checked the authentication service logs using the `tail -f /var/log/auth.log` command and found that there were multiple failed login attempts due to the incorrect network connectivity. Once the DNS settings were corrected, the terminal was able to connect to the authentication service, and the Sales Agent was able to successfully add the new location for the merchant. The team also implemented a monitoring solution using Prometheus and Grafana to continuously track the network connectivity and authentication service health, ensuring that similar issues are detected and resolved proactively in the future.",
+      "Merchant unable to e-sign Agreement due to session timeout. While trying to onboard an additional location for an existing merchant ID, the Sales Agent encountered a hardware issue with the POS terminal, preventing the configuration process. This affected the Sales Agent's ability to complete the onboarding for the merchant.. Keywords: database, transaction, concurrency, session, deadlock, isolation, configuration, retry\nAffected Component: Database\nResolution: The incident was resolved by identifying and correcting a backend database synchronization error that was preventing configuration saves. The root cause was traced to a race condition in the database transaction handling when multiple Sales Agents attempted to configure new locations simultaneously. This led to inconsistent session state between the frontend application and the backend database, causing session timeouts during e-signature processes. The diagnostic process began with reviewing the application logs, specifically focusing on the /api/v1/configure endpoint, which showed frequent 500 Internal Server Error responses. Using the ELK stack (Elasticsearch, Logstash, Kibana), we analyzed the logs and identified a pattern of database deadlocks occurring when multiple concurrent requests tried to update the same merchant configuration records. The database was running on a PostgreSQL 13 instance, and the deadlock logs indicated that the transaction isolation level was set to READ COMMITTED, which was insufficient for the high concurrency scenario. To resolve this, we modified the transaction isolation level to REPEATABLE READ for the specific configuration update endpoints, which ensured that each transaction had a consistent view of the database during the update process. Additionally, we implemented a retry mechanism with exponential backoff for the configuration save operations, which helped in handling transient database lock contention. The fix was deployed via a blue-green deployment strategy, ensuring zero-downtime during the update. Post-deployment, we monitored the system using Prometheus and Grafana to confirm that the database deadlocks had been resolved and that the session timeout issue was no longer occurring.",
+      "Unable to select specific POS terminal model. A Sales Agent's access to configure service fees for a merchant is restricted erroneously, preventing them from finalizing the onboarding process. Merchant onboarding delayed.. Keywords: network, timeout, load balancer, api, frontend, backend, tcpdump, latency\nAffected Component: Network Infrastructure\nResolution: The incident was caused by an unexpected timeout in the POS terminal model selection module, which was impacting the Sales Agent's ability to configure service fees for the merchant. The root cause was identified through a detailed analysis of the system logs, which showed that the equipment selection module was experiencing frequent timeouts when attempting to fetch terminal model data from the backend service. The initial troubleshooting steps included checking the network latency between the frontend application and the backend service using the `ping` and `traceroute` commands, which revealed a significant delay in the response time. Further investigation using the `tcpdump` tool showed that there were intermittent packet losses and TCP retransmissions between the frontend and the backend service. To resolve the issue, the network routing for the equipment selection module was optimized by implementing a more direct route through the internal load balancer, which reduced the latency and improved the system responsiveness. Additionally, the backend service was configured to increase the timeout threshold for API requests, allowing for more robust handling of transient network issues. The final resolution involved deploying a patch to the frontend application to handle potential network errors gracefully, ensuring that the user interface remained responsive even during temporary connectivity issues. The system was then monitored using the Prometheus and Grafana tools to ensure that the changes were effective and that no further timeouts occurred."
+    ],
+    "retrieved_teams": [
+      "IT Support",
+      "Network Ops",
+      "IT Support",
+      "IT Support",
+      "Network Ops"
+    ],
+    "generated_answer": "Root Cause: Stale credentials cached in Windows Credential Manager for the svc-pos-provision service account, as seen in INC00657 (AD account lockouts from cached credentials in Credential Manager).  \nResolution: 1. Unlock the svc-pos-provision account via ADUC. 2. Access Credential Manager (Control Panel > User Accounts > Credential Manager) and delete all entries under \"Windows Credentials > Generic Credentials\" associated with the service account. 3. Re-authenticate the service account by restarting the POS provisioning service or triggering a credential refresh via the service's configuration tool. 4. Verify no remaining cached credentials exist using the `cmdkey /list` command.",
+    "structured": {
+      "predicted_team": "IT Support",
+      "predicted_priority": "2 - High",
+      "routing_justification": "IT Support handles Active Directory credential management issues impacting service account operations.",
+      "incident_attribution": [
+        {
+          "id": "INC00657",
+          "team": "IT Support",
+          "urgency": "2",
+          "impact": "3"
+        }
+      ]
+    },
+    "ragas_scores": {
+      "context_precision": 0.9999999999666667,
+      "context_recall": 1.0,
+      "faithfulness": 0.0,
+      "answer_relevancy": 0.8035107363536477
+    }
+  },
+  {
+    "index": 13,
+    "number": "TEST_INC014",
+    "query": "Can't login to merchant dashboard after password reset. User reset password via self-service portal, received confirmation email, but when attempting to log in, the dashboard displays 'Invalid credentials or session expired' error.. password reset login failure Active Directory replication delay Keycloak OAuth token merchant dashboard",
+    "ground_truth": "The root cause was replication latency between Active Directory Domain Controllers combined with a cached Kerberos ticket on the web frontend. Resolved by manually triggering AD inter-site replication via repadmin, revoking active session tokens, and verifying login authentication.",
+    "ground_truth_team": "IT Support",
+    "ground_truth_category": "Access",
+    "urgency": 2,
+    "impact": 3,
+    "retrieved_context_ids": [
+      "INC00487",
+      "INC00035",
+      "INC00228",
+      "INC00400",
+      "INC00214"
+    ],
+    "retrieved_contexts": [
+      "Login credentials not working for merchant. Merchant facing difficulties in submitting the e-signed Merchant Agreement through the UI, hindering the onboarding process.. Keywords: browser, cookies, authentication, session, login, cache, session management, token\nAffected Component: Authentication Service\nResolution: The issue with the merchant's login credentials preventing submission of the e-signed Merchant Agreement was resolved through a comprehensive diagnostic and remediation process. Initial troubleshooting began with verifying the authentication service's status, confirming that the service was operational and no outages were reported. The next step involved checking the browser's cache and cookies, as stale data can interfere with authentication sessions. Using browser developer tools, we identified that the session token was not being refreshed correctly, leading to authentication failures. To address this, a system cache refresh was performed on the authentication service, which involves clearing the browser's local storage, cookies, and session data. This was done through the browser's settings and using the 'Clear Browsing Data' function, ensuring that all temporary internet files and cached data were removed. Additionally, we executed a session reset command on the authentication service's backend, which involved restarting the session management daemon and ensuring that the session store was properly synchronized. We also checked the authentication logs for any errors or anomalies, using the 'auth.log' file and log analysis tools to confirm that the session tokens were being generated and validated correctly. Finally, we verified the functionality by having the merchant attempt the login process again, ensuring that the equipment selection dropdown functioned properly and allowed Sales Agents to choose equipment efficiently. The resolution involved a combination of client-side and server-side diagnostics, including cache and session management, to ensure that the authentication process was functioning as expected.",
+      "Unable to link new location to existing merchant ID. A merchant is unable to log in to the Customer UI to review and e-sign the Merchant Agreement due to login credentials not being accepted.. Keywords: authentication, database, synchronization, replication, sync, merchant, whitelist, login\nAffected Component: Authentication Service\nResolution: The incident was caused by a data synchronization delay between the merchant database and the Customer UI authentication service, leading to an inability to validate login credentials for the new location. The root cause was identified through the following steps: 1) Checking the authentication service logs (located at /var/log/auth-service.log) which showed a 401 Unauthorized error when attempting to validate the merchant's credentials. 2) Running a database consistency check using the 'db_consistency_check.sh' script on the primary database server, which revealed a replication lag of 12 minutes between the primary and secondary nodes. 3) Analyzing the Customer UI logs (accessed via the ELK stack at http://logserver:9200) which indicated a 503 Service Unavailable error when attempting to fetch the merchant's profile data. 4) Verifying the synchronization status using the 'sync_status.sh' script, which confirmed that the secondary database was not receiving updates from the primary. The resolution involved manually triggering a database replication sync using the 'sync_force.sh' script, which successfully populated the missing merchant data in the Customer UI. Additionally, a temporary workaround was implemented by adding the new location's merchant ID to the authentication service's whitelist using the 'add_merchant_to_whitelist.sh' script, which allowed the merchant to log in and review the agreement. Finally, a permanent fix was scheduled for the next maintenance window to address the underlying replication lag issue by upgrading the database replication protocol to a more efficient version.",
+      "Error in calculating processing fees for a merchant. A merchant is unable to log in to the Customer UI to review and e-sign the Merchant Agreement due to login credentials not being accepted.. Keywords: oauth, jwt, token, signing key, key rotation, authentication service, curl, token introspection\nAffected Component: Authentication Service\nResolution: Upon initial investigation, the incident was traced to an authentication service malfunction, specifically within the OAuth 2.0 token validation process. The merchant's login credentials were being rejected due to an invalid JWT (JSON Web Token) signature, which was generated by the authentication service. The root cause was identified through the following steps: 1. Checked the authentication service logs using the ELK stack (Elasticsearch, Logstash, Kibana) to identify any anomalies. 2. Performed a token validation check using the 'curl' command against the /token/introspect endpoint, which returned a 'signature invalid' error. 3. Verified the cryptographic key configuration in the authentication service's configuration file (auth-service-config.yaml) and found that the signing key had expired and was not being refreshed as scheduled. 4. Temporarily revoked the expired key and deployed a new signing key via a rolling update using Kubernetes Helm. 5. Revalidated the token using the same 'curl' command, which now returned a successful 'active' status. 6. Monitored the authentication service's health metrics through Prometheus and Grafana to ensure the new key was being used and there were no further errors. 7. Notified the merchant that the issue had been resolved and provided temporary access credentials to expedite the e-signature process. 8. Scheduled a follow-up review of the key rotation policy to prevent future occurrences.",
+      "Login credentials not working for merchant. Merchants encounter session timeout errors while trying to e-sign the Merchant Agreement in the Customer UI, leading to unsuccessful e-signature submission.. Keywords: browser, session, touchscreen, cookie, authentication, ui\nAffected Component: Authentication Service\nResolution: The issue was resolved by addressing the session timeout error encountered by merchants during e-signature submission in the Customer UI. The root cause was identified as an unexpected interaction between the touchscreen's gesture recognition and the browser's session management system. The session timeout error was triggered when the browser's session cookie was being cleared due to inactivity, which was exacerbated by the touchscreen's touch events being interpreted as user activity. To resolve this, the following steps were executed: 1. Diagnosed the issue by analyzing browser console logs and session cookie expiration times using tools like Chrome DevTools and curl commands to inspect HTTP headers. 2. Verified the session management behavior by monitoring the server-side session store with a custom script that logged session creation and expiration events. 3. Temporarily disabled touchscreen functionality via the device's settings and tested the e-signature process using an external mouse, which bypassed the touch events that were causing the session to be marked as inactive. 4. Implemented a workaround by configuring the browser to ignore touch events during session activity checks, using the `touch-action` CSS property to disable touch-based interactions. 5. Monitored the system for any recurring issues using the Application Performance Management (APM) tool, ensuring that the session timeout threshold was not being exceeded. The resolution ensured that merchants could successfully complete the e-signature process without encountering session timeout errors.",
+      "Login credentials not working for merchant. Sales Agent encountered an error while trying to onboard an additional location for an existing merchant ID. The system failed to save the new location details.. Keywords: authentication, role, permissions, crm, acl, access control, role management\nAffected Component: Authentication Service\nResolution: The incident was resolved by systematically diagnosing the access issue related to the merchant's login credentials. Initial troubleshooting began with verifying the user's role permissions within the authentication service. Using the internal audit log tool, we checked the user's access rights and discovered that the Sales Agent's role lacked the necessary permissions to modify location details in the CRM system. To confirm, we executed a query on the authentication database to check the user's assigned roles and permissions. The query revealed that the 'Location Management' permission was missing from the agent's role. Additionally, we reviewed the system's access control list (ACL) to ensure there were no restrictive policies applied to the merchant's account. The resolution involved updating the agent's role to include the 'Location Management' permission. This was done through the role management interface in the authentication service, where we added the missing permission and saved the changes. After the update, the agent was able to successfully onboard the new location without encountering the previous error."
+    ],
+    "retrieved_teams": [
+      "Network Ops",
+      "IT Support",
+      "IT Support",
+      "IT Support",
+      "IT Support"
+    ],
+    "generated_answer": "Root Cause: The Active Directory replication delay (INC00035) and Keycloak OAuth token validation failure (INC00228) are the underlying causes. The password reset did not propagate to the authentication service due to replication lag, and the OAuth token may still reference the old password hash.  \nResolution: 1. Verify Active Directory replication status using `replica_status.sh` script from Incident 2. 2. Force AD replication sync via `sync_force.sh` as in Incident 2. 3. Clear Keycloak OAuth token cache using `token_introspect.sh` from Incident 3. 4. Invalidate and reissue tokens via Keycloak admin API. 5. Confirm password sync by checking `/var/log/auth-service.log` for successful credential updates.",
+    "structured": {
+      "predicted_team": "IT Support",
+      "predicted_priority": "2 - High",
+      "routing_justification": "The issue involves authentication service synchronization (INC00035) and OAuth token validation (INC00228), which are handled by IT Support.",
+      "incident_attribution": [
+        {
+          "id": "INC00035",
+          "team": "IT Support",
+          "urgency": "2",
+          "impact": "1"
+        },
+        {
+          "id": "INC00228",
+          "team": "IT Support",
+          "urgency": "1",
+          "impact": "3"
+        }
+      ]
+    },
+    "ragas_scores": {
+      "context_precision": 0.0,
+      "context_recall": 0.5,
+      "faithfulness": 0.375,
+      "answer_relevancy": 0.6772522934963036
+    }
+  },
+  {
+    "index": 14,
+    "number": "TEST_INC015",
+    "query": "YubiKey FIDO2 Hardware Token Not Recognized on macOS Workstations. Support engineers running macOS Sonoma are unable to complete multi-factor authentication (MFA) on the internal incident ticketing portal using YubiKey 5C NFC hardware tokens. Chrome browser reports 'The operation timed out or was not allowed by the user'.. YubiKey FIDO2 macOS Sonoma WebAuthn MFA smart card Jamf Pro security token",
+    "ground_truth": "The root cause was an outdated WebAuthn / FIDO2 middleware profile on macOS clients and missing USB entitlement permissions in the Chrome enterprise policy. Resolved by deploying the updated YubiKey CCID configuration profile via Jamf Pro MDM and updating the Chrome enterprise policy.",
+    "ground_truth_team": "IT Support",
+    "ground_truth_category": "Hardware",
+    "urgency": 3,
+    "impact": 2,
+    "retrieved_context_ids": [
+      "INC00769",
+      "INC00651",
+      "INC00661",
+      "INC00655",
+      "INC00732"
+    ],
+    "retrieved_contexts": [
+      "YubiKey FIDO2 hardware token not recognized in macOS Sonoma WebAuthn prompts. Engineers using macOS Sonoma workstations were unable to authenticate into AWS Console or Okta using YubiKey 5C NFC security keys. Safari and Chrome reported 'Security key not recognized or timed out'.. Keywords: yubikey, fido2, webauthn, macos sonoma, smartcard ccid, jamf pro, security key, hardware token, okta authentication\nAffected Component: Access Control\nResolution: Log analysis in macOS Console showed CCID smartcard daemon communication failures following the macOS 14.3 update. The technician deployed a Jamf Pro configuration profile enabling CCID smartcard entitlements and set Chrome enterprise policy 'WebAuthenticationPermitEnterpriseAttestation = true'. The technician also updated YubiKey Manager firmware to 5.4.3. Hardware token FIDO2 WebAuthn prompts functioned reliably across all browsers.",
+      "YubiKey 5 NFC FIDO2 PIN locked after failed attempts blocking Okta SSO. Senior financial auditor was locked out of corporate Okta SSO portal after three incorrect FIDO2 PIN entries on their YubiKey 5 NFC hardware token.. Keywords: yubikey, fido2, pin blocked, ykman, okta sso, webauthn, hardware token\nAffected Component: YubiKey\nResolution: IT Support connected the user's hardware token via YubiKey Manager CLI ('ykman fido info') which confirmed 'PIN is blocked (0 attempts remaining)'. Because FIDO2 security architecture enforces hardware lockout to prevent brute-force attacks, the FIDO2 application required a physical reset. The technician issued 'ykman fido reset', re-registered the user's hardware key in Okta Admin Console under Multi-Factor Authentication > FIDO2 (WebAuthn), and guided the user to configure a new 8-digit PIN. The user authenticated into Okta successfully.",
+      "Entra PIM role activation blocked by MFA authentication strength mismatch. Cloud DevOps engineers were unable to activate privileged 'Global Administrator' roles in Entra Privileged Identity Management (PIM), receiving 'MFA requirement not met'.. Keywords: entra pim, privileged identity management, phishing-resistant mfa, authentication strength, fido2, yubikey\nAffected Component: Microsoft Entra ID\nResolution: Review of the Entra PIM policy showed that role activation recently enforced 'Phishing-resistant MFA' authentication strength. The engineers had authenticated using SMS OTP and Microsoft Authenticator push notifications, which do not satisfy phishing-resistant criteria. The technician assisted the engineers in registering their enterprise YubiKey 5 NFC hardware keys under My Sign-Ins > Security Info. Upon re-authenticating with FIDO2 hardware keys, PIM role activations succeeded instantly.",
+      "WebAuthn attestation mismatch in Chrome preventing passwordless login. Engineers using Google Chrome on Ubuntu workstations were unable to authenticate into internal GitLab using FIDO2 keys, receiving 'WebAuthn: Invalid attestation'.. Keywords: webauthn, fido2, attestation mismatch, google chrome, gitlab sso, udev rules, hidraw\nAffected Component: WebAuthn\nResolution: Inspection of browser developer console logs showed that Chrome 122 enforced WebAuthn Enterprise Attestation, while the GitLab authentication backend only accepted 'direct' or 'none' attestation. The technician updated GitLab's omniauth configuration in gitlab.rb to include 'attestation: direct' and added udev rules ('/etc/udev/rules.d/70-u2f.rules') granting non-root user access to hidraw USB devices. GitLab reconfigured cleanly, and developers logged in via FIDO2 keys without errors.",
+      "Jamf Pro FileVault disk encryption recovery key escrow failure on macOS. Security compliance report showed 45 executive MacBooks with FileVault enabled locally, but without Personal Recovery Keys (PRK) escrowed in Jamf Pro.. Keywords: filevault, jamf pro, recovery key escrow, fdesetup, prk, macos disk encryption\nAffected Component: Jamf Pro\nResolution: Running 'fdesetup status' on target Macs showed FileVault was On, but 'fdesetup hasrecoverykey' returned false for MDM institutional escrow. Users had manually activated FileVault before the Jamf MDM profile was received. The technician deployed a Jamf policy with the 'Escrow Personal Recovery Key' payload using the command 'fdesetup changerecovery -norecoverykey -user <username>'. The policy prompted users for their macOS logon password once, generated a new PRK, and securely escrowed the cryptographic key into the Jamf Pro database."
+    ],
+    "retrieved_teams": [
+      "IT Support",
+      "IT Support",
+      "IT Support",
+      "IT Support",
+      "IT Support"
+    ],
+    "generated_answer": "Root Cause: INC00769 (macOS 14.3 update caused CCID smartcard daemon communication failures, preventing YubiKey 5C NFC recognition in WebAuthn prompts)  \nResolution: 1. Deploy Jamf Pro configuration profile enabling CCID smartcard entitlements. 2. Set Chrome enterprise policy 'WebAuthenticationPermitEnterpriseAttestation = true'. 3. Update YubiKey Manager firmware to 5.4.3 via YubiKey Manager CLI.",
+    "structured": {
+      "predicted_team": "IT Support",
+      "predicted_priority": "2 - High",
+      "routing_justification": "The issue involves macOS Sonoma WebAuthn integration with YubiKey hardware tokens, requiring IT Support expertise in access control and Jamf Pro configuration",
+      "incident_attribution": [
+        {
+          "id": "INC00769",
+          "team": "IT Support",
+          "urgency": "2",
+          "impact": "2"
+        },
+        {
+          "id": "INC00651",
+          "team": "IT Support",
+          "urgency": "2",
+          "impact": "3"
+        },
+        {
+          "id": "INC00661",
+          "team": "IT Support",
+          "urgency": "1",
+          "impact": "2"
+        },
+        {
+          "id": "INC00655",
+          "team": "IT Support",
+          "urgency": "2",
+          "impact": "2"
+        },
+        {
+          "id": "INC00732",
+          "team": "IT Support",
+          "urgency": "2",
+          "impact": "2"
+        }
+      ]
+    },
+    "ragas_scores": {
+      "context_precision": 0.7499999999625,
+      "context_recall": 1.0,
+      "faithfulness": 0.8333333333333334,
+      "answer_relevancy": 0.7047278500980333
+    }
+  },
+  {
+    "index": 15,
+    "number": "TEST_INC016",
+    "query": "Payment terminal receipt printer not printing receipts. POS terminal at register 3 completes credit card transactions successfully, but the thermal receipt printer does not output any paper and makes a beeping noise.. receipt printer POS terminal print spooler Epson TM hardware queue stalled COM port",
+    "ground_truth": "The root cause was a stalled Windows Print Spooler service caused by a corrupted raw print job in the spool directory coupled with a misconfigured serial baud rate on the thermal printer. Resolved by stopping the spooler, clearing orphaned print files, matching the COM port baud rate, and testing print output.",
+    "ground_truth_team": "IT Support",
+    "ground_truth_category": "Hardware",
+    "urgency": 2,
+    "impact": 3,
+    "retrieved_context_ids": [
+      "INC00761",
+      "INC00370",
+      "INC00252",
+      "INC00171",
+      "INC00405"
+    ],
+    "retrieved_contexts": [
+      "POS thermal receipt printer offline due to Print Spooler deadlock and serial COM baud rate mismatch. Register 3 POS thermal receipt printer stopped printing receipts and made repetitive error beeps. Credit card transactions completed successfully in software, but customer receipts failed to print, creating checkout bottlenecks.. Keywords: receipt printer, pos terminal, print spooler, epson tm, com port, baud rate, thermal printer, hardware queue, register\nAffected Component: Hardware - Peripheral\nResolution: The technician stopped the Windows Print Spooler service ('net stop spooler') and found corrupted raw spool files in 'C:\\Windows\\System32\\spool\\PRINTERS'. Device Manager inspection revealed that the virtual COM3 port baud rate was misconfigured to 9600 bps instead of 115200 bps expected by the Epson TM-T88 driver. The technician deleted stale spool files, adjusted the COM3 baud rate to 115200 bps with 8-N-1 flow control, restarted the Print Spooler, and performed a test print, restoring full thermal receipt printing.",
+      "Merchant data not displaying in Sales UI. During the onboarding process, a Sales Agent faced a hardware issue with a payment terminal not integrating properly with the system, causing delays in setting up payment processing for the merchant.. Keywords: payment terminal, rfid reader, diag_scan, error code 1234, hardware fault, terminal integration, cli diagnostics, module replacement\nAffected Component: Payment Gateway\nResolution: The incident involved a Sales Agent encountering a hardware issue with a payment terminal during the onboarding process, which was preventing the merchant data from displaying in the Sales UI. The resolution process began with an initial assessment of the payment terminal's connectivity and functionality. The IT Support team first checked the terminal's physical connections, ensuring that the USB cable was securely connected and that the power supply was functioning correctly. They then performed a diagnostic scan using the terminal's built-in diagnostic tool, which indicated a fault in the RFID reader module. To confirm the issue, the team executed the 'diag_scan' command on the terminal's command-line interface (CLI), which returned an error message: 'RFID Reader Module Fault - Error Code: 1234'. This error was cross-referenced with the terminal's technical documentation, which confirmed that the RFID reader was the primary cause of the integration failure. The team then proceeded to replace the faulty RFID reader module with a spare part, following the manufacturer's recommended procedure. After the replacement, the terminal was rebooted, and the IT Support team verified the integration by attempting to process a test transaction. The test transaction was successful, and the merchant data was subsequently displayed in the Sales UI without further issues. The incident was resolved through a systematic approach that included diagnostic testing, error code interpretation, and hardware replacement.",
+      "Merchant data displaying incorrectly. During the onboarding process, a Sales Agent faced a hardware issue with a payment terminal not integrating properly with the system, causing delays in setting up payment processing for the merchant.. Keywords: payment gateway, service fee, merchant account, api endpoint, configuration audit, transaction validation, log analysis, fee calculation\nAffected Component: Payment Gateway\nResolution: The incident was resolved through a multi-step process involving diagnostic analysis, configuration correction, and system validation. The Sales Agent first identified the issue during the onboarding process when the payment terminal failed to integrate with the system, leading to incorrect merchant data display. The root cause was traced to an incorrect service fee configuration in the Payment Gateway integration. To resolve this, the following steps were executed: 1. The Sales Agent accessed the Payment Gateway configuration interface using the admin credentials, navigated to the 'Merchant Accounts' section, and reviewed the fee structure for the affected merchant. 2. The configuration was corrected by adjusting the service fee percentage and recalibrating the charge calculation formula using the Payment Gateway API's update_merchant_fee endpoint. 3. A script was executed to audit all merchant accounts using the 'get_all_merchants' API endpoint, which retrieved a list of merchants and their associated fee configurations. 4. The script compared each merchant's fee settings against the predefined service fee policy and automatically corrected discrepancies using the 'update_merchant_fee' API endpoint. 5. After the configuration was updated, the Sales Agent performed a validation check by simulating a payment transaction through the terminal, which successfully processed the transaction with the correct fee applied. 6. The system logs were reviewed using the 'tail -f /var/log/payment_gateway.log' command to ensure there were no errors during the transaction processing. 7. Finally, a comprehensive audit was conducted across all merchant accounts to ensure consistency and accuracy in billing, which was confirmed through the Payment Gateway's reporting dashboard.",
+      "Unable to add new location due to POS terminal malfunction. During equipment selection for a new merchant, Sales Agents are experiencing an issue where the dropdown menu for selecting equipment models is not loading, causing delays in onboarding.. Keywords: payment gateway, api integration, terminal configuration, telnet, api version, tls certificate, firewall rules, dropdown menu\nAffected Component: Payment Gateway\nResolution: The issue was diagnosed as a misconfiguration in the Payment Gateway integration with the POS terminal, which caused the equipment model dropdown menu to fail loading during merchant onboarding. Initial troubleshooting involved checking the terminal's firmware version and confirming compatibility with the current POS system software. The IT Support team executed a series of diagnostic commands, including `telnet <gateway_ip> 80` to verify connectivity, and reviewed the gateway's access logs for any 403 or 503 errors. The terminal's integration with the Payment Gateway was found to be blocked due to an outdated API version, which was causing the dropdown menu to hang during data retrieval. To resolve this, the team updated the Payment Gateway's API version to v3.2.1, reconfigured the terminal's backend settings using the `configure_terminal --api_version 3.2.1` command, and validated the changes by simulating a merchant onboarding process. Additionally, the team ensured that the terminal's TLS certificate was up to date and that the firewall rules allowed traffic on port 443. After these changes, the equipment model dropdown menu functioned correctly, and the Sales Agents were able to proceed with onboarding without further delays.",
+      "Fee configuration not reflecting for additional location. During the onboarding process, a Sales Agent faced a hardware issue with a payment terminal not integrating properly with the system, causing delays in setting up payment processing for the merchant.. Keywords: database, sql, redis, fee configuration, duplicate entry, race condition, payment service, merchant config\nAffected Component: Payment Gateway\nResolution: The incident was escalated to the IT Support team upon the Sales Agent reporting the hardware issue with the payment terminal during the onboarding process. The team first verified the physical connectivity of the terminal, ensuring all cables were properly connected and the power supply was stable. They then checked the terminal's firmware version and confirmed it was up to date. Next, the IT Support team accessed the backend system to investigate the root cause of the fee configuration not reflecting for the additional location. They performed a database audit to identify any potential conflicts or duplication errors. Using SQL queries, they scanned the 'merchant_config' table and found a duplicate entry for the merchant's location ID, which was causing the fee configuration to be overwritten. The team then executed a DELETE operation on the conflicting record and ran a database consistency check using the 'CHECK TABLE merchant_config' command. Additionally, they reviewed the application logs in the 'logs/payment_service.log' file and identified a race condition in the fee configuration update process. To resolve this, the development team implemented a locking mechanism using Redis to prevent concurrent updates to the same location's fee configuration. The Sales Agent was then contacted to re-initiate the onboarding process, and the terminal was re-integrated with the system. The issue was resolved successfully, and the Sales Agent was able to complete the setup for the new location without further delays."
+    ],
+    "retrieved_teams": [
+      "IT Support",
+      "IT Support",
+      "IT Support",
+      "IT Support",
+      "IT Support"
+    ],
+    "generated_answer": "Root Cause: INC00761 identified a Print Spooler deadlock and serial COM baud rate mismatch (COM3 configured to 9600 bps instead of 115200 bps) causing the Epson TM-T88 thermal receipt printer to stall and produce beeping noises (cite incident ID: INC00761)\nResolution: 1. Stop Windows Print Spooler service via 'net stop spooler' 2. Delete corrupted spool files in 'C:\\Windows\\System32\\spool\\PRINTERS' 3. In Device Manager, modify COM3 port settings to 115200 bps with 8-N-1 flow control 4. Restart Print Spooler with 'net start spooler' 5. Perform test print to verify thermal receipt functionality",
+    "structured": {
+      "predicted_team": "IT Support",
+      "predicted_priority": "2 - High",
+      "routing_justification": "Hardware peripheral issue with POS thermal printer requiring IT Support expertise in peripheral configuration and spooler management",
+      "incident_attribution": [
+        {
+          "id": "INC00761",
+          "team": "IT Support",
+          "urgency": "2",
+          "impact": "2"
+        }
+      ]
+    },
+    "ragas_scores": {
+      "context_precision": 0.9999999999,
+      "context_recall": 0.5,
+      "faithfulness": 0.9090909090909091,
+      "answer_relevancy": 0.7568768379522935
+    }
+  },
+  {
+    "index": 16,
+    "number": "TEST_INC017",
+    "query": "Automated Onboarding Welcome Emails Bouncing with 554 Relay Access Denied. New merchants are not receiving their onboarding activation emails. The notification service log shows SMTP delivery failure: '554 5.7.1 <dest@domain.com>: Relay access denied' when communicating with the corporate Exchange relay.. SMTP Exchange relay access denied 554 error email notification onboarding email Receive Connector",
+    "ground_truth": "The root cause was that the outbound IP address of the newly scaled onboarding worker node was not added to the Microsoft Exchange Server Receive Connector anonymous relay whitelist. Resolved by registering the new worker pod subnet in Exchange Receive Connector settings and restarting the mail dispatcher queue.",
+    "ground_truth_team": "IT Support",
+    "ground_truth_category": "Software",
+    "urgency": 2,
+    "impact": 2,
+    "retrieved_context_ids": [
+      "INC00764",
+      "INC00186",
+      "INC00093",
+      "INC00146",
+      "INC00068"
+    ],
+    "retrieved_contexts": [
+      "Automated onboarding welcome emails bouncing with 554 Relay Access Denied. Newly onboarded merchants did not receive automated welcome emails containing portal setup credentials. Mail server logs reported outbound bounce errors with '554 5.7.1 Relay access denied'.. Keywords: email delivery, smtp relay, 554 relay denied, postfix, ip whitelist, welcome email, merchant credentials, mail queue\nAffected Component: Email Service\nResolution: Log review on the Postfix internal SMTP relay server showed that newly scaled onboarding worker nodes were provisioned in a new subnet ('10.50.12.0/24') that was missing from the Postfix 'mynetworks' trusted IP whitelist. The technician added the new worker subnet to 'mynetworks' in '/etc/postfix/main.cf', reloaded the postfix service ('postfix reload'), and flushed the mail queue ('postqueue -f'). All pending onboarding welcome emails were successfully delivered.",
+      "Access denied error when trying to submit merchant data. After selecting equipment for a new location under an existing merchant ID, the Sales Agent noticed that the equipment choices were not saved. This caused delays in the onboarding process for the additional location.. Keywords: session, authentication, crm, touchscreen, input events, session timeout, state persistence, e-signature\nAffected Component: Authentication Service\nResolution: The incident was resolved by addressing the root cause of the access denied error when submitting merchant data. The Sales Agent encountered an issue where selected equipment for a new location under an existing merchant ID was not being saved, leading to delays in the onboarding process. Upon investigation, it was determined that the problem stemmed from a misconfiguration in the authentication session management within the CRM system. The CRM system was failing to persist the user's session state after equipment selection, resulting in the access denied error. To resolve this, the following steps were taken: 1. The IT Support team first validated the issue by reproducing the scenario in a test environment. 2. They checked the session management logs and identified that the session token was being invalidated prematurely due to a timeout setting in the authentication service. 3. The team temporarily disabled the touchscreen functionality, as the touchscreen was generating conflicting input events that interfered with the session state. 4. They then instructed the merchant to use an external mouse for e-signing the agreement, which bypassed the touchscreen conflicts. 5. The IT Support team also configured the authentication service to extend the session timeout duration and adjust the session state persistence settings. 6. Finally, they ensured that the CRM system was updated to handle touch input events correctly without disrupting session integrity. These changes allowed the merchant to successfully submit the equipment data and complete the onboarding process without further interruptions.",
+      "Access denied error when trying to submit merchant data. During equipment selection for a new merchant, Sales Agents are experiencing an issue where the dropdown menu for selecting equipment models is not loading, causing delays in onboarding.. Keywords: api, authentication, middleware, token, crm, endpoint, bearer, error\nAffected Component: Authentication Service\nResolution: The issue was systematically diagnosed by first isolating the problem to the merchant onboarding workflow during equipment selection. Initial troubleshooting involved checking the network connectivity between the Sales Agent's client devices and the backend CRM system. Using ping and traceroute commands, we confirmed that there were no network latency or packet loss issues. Next, we examined the CRM application logs and identified a recurring 500 Internal Server Error when the equipment dropdown menu was accessed. Further analysis of the server-side logs revealed a misconfigured API endpoint in the CRM's backend, specifically in the /api/v1/merchants/equipment endpoint, which was returning an unauthorized error (401) due to a missing bearer token in the request headers. This was traced back to a recent update in the authentication service that inadvertently changed the token validation logic. To resolve this, the authentication service was rolled back to a stable version, and a temporary fix was implemented in the CRM's API middleware to ensure the bearer token is correctly appended to all equipment-related requests. Additionally, a patch was deployed to the CRM system to update the authentication middleware, ensuring compatibility with the latest authentication service. The affected merchants were notified, and their onboarding processes were resumed. Post-resolution, a comprehensive regression test was conducted to ensure no other endpoints were affected by the authentication service update. The root cause was confirmed to be an incompatibility between the CRM's API middleware and the updated authentication service, leading to unauthorized access errors during equipment selection.",
+      "Sales Agent unable to access onboarding portal for merchant ID. Sales Agent received an 'Access Denied' error message when attempting to submit merchant data for a new location. This prevented the completion of the onboarding process and submission of vital information.. Keywords: api, authentication, session, token, log analysis, configuration, service restart, error handling\nAffected Component: Authentication Service\nResolution: The incident was resolved by systematically diagnosing and addressing the backend API communication error that was preventing the Sales Agent from accessing the onboarding portal. The initial step involved verifying the network connectivity between the user's endpoint and the backend API server using the 'ping' and 'traceroute' commands. These commands confirmed that there was no network latency or packet loss, ruling out network infrastructure issues. Next, the team checked the API server's status using the 'systemctl status api-service' command, which indicated that the service was running but experiencing high latency. The logs were analyzed using 'tail -f /var/log/api-service.log' to identify the root cause. The logs revealed that the API was returning a 403 Forbidden error due to an invalid session token, which was likely caused by a misconfigured authentication service. The team then validated the authentication service's configuration by checking the 'auth-service.conf' file and found that the session token validation was incorrectly set to a short expiration time. The fix involved adjusting the session token expiration duration from 5 minutes to 30 minutes in the 'auth-service.conf' file and restarting the authentication service using 'systemctl restart auth-service'. Additionally, the team performed a full system health check using 'curl -I https://api.onboarding.portal' to ensure that the API was responding correctly. The issue was fully resolved when the Sales Agent was able to access the onboarding portal without encountering the 'Access Denied' error, and the UI displayed the correct interface post-login.",
+      "Access denied error when trying to submit merchant data. Merchant data entered by Sales Agents in the Sales UI is not transferring to the Processing stage even after completion, halting the onboarding process for affected merchants.. Keywords: rbac, authentication service, api endpoint, role-based access, permissions audit, identity management system, fee configuration\nAffected Component: Authentication Service\nResolution: The incident was resolved through a systematic approach that began with identifying the root cause of the access denied error. Initial diagnostics involved checking the Sales UI's access logs to trace the exact point of failure. The logs indicated that the Sales Agent role was being denied access to the fee configuration page, which is critical for transferring merchant data to the Processing stage. A thorough review of the role-based access control (RBAC) configuration in the Authentication Service revealed that the Sales Agent role lacked the necessary permissions to interact with the fee configuration API endpoint. To resolve this, the RBAC policy was updated to grant the Sales Agent role the appropriate permissions, including the 'configure_fees' action on the fee configuration resource. Additionally, a permissions audit was conducted using the 'auditlogs' command in the Identity Management System to ensure there were no other discrepancies. The fix was validated by re-testing the workflow with a sample merchant account, confirming that data submission now successfully transitions to the Processing stage. The resolution also included updating the role's access policy in the Identity Management System to prevent future occurrences of similar issues."
+    ],
+    "retrieved_teams": [
+      "IT Support",
+      "IT Support",
+      "IT Support",
+      "Network Ops",
+      "Network Ops"
+    ],
+    "generated_answer": "Root Cause: INC00764 identified that newly provisioned worker nodes in subnet '10.50.12.0/24' were missing from Postfix's 'mynetworks' trusted IP whitelist, causing Relay Access Denied (554) errors for outbound email delivery.  \nResolution: 1. Add the new worker subnet to Postfix's 'mynetworks' in '/etc/postfix/main.cf'. 2. Reload Postfix with 'postfix reload'. 3. Flush the mail queue with 'postqueue -f' to process pending emails.",
+    "structured": {
+      "predicted_team": "IT Support",
+      "predicted_priority": "1 - Critical",
+      "routing_justification": "The issue involves email relay configuration errors impacting onboarding workflows, which aligns with IT Support's responsibility for email service infrastructure.",
+      "incident_attribution": [
+        {
+          "id": "INC00764",
+          "team": "IT Support",
+          "urgency": "1",
+          "impact": "2"
+        }
+      ]
+    },
+    "ragas_scores": {
+      "context_precision": 0.9999999999,
+      "context_recall": 0.0,
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.8212708633558803
+    }
+  },
+  {
+    "index": 17,
+    "number": "TEST_INC018",
+    "query": "Merchant Agreement PDF download generates corrupted 0-byte file. When agents click 'Download Executed Agreement' in the Merchant Management portal, the generated PDF downloads as a 0-byte corrupted file that cannot be opened.. PDF download 0-byte file ENOSPC disk space Merchant Management render service wkhtmltopdf",
+    "ground_truth": "The root cause was temporary disk space exhaustion in `/tmp` on the rendering service container, preventing the PDF generator from writing the converted file before streaming. Resolved by purging temporary files, increasing container ephemeral storage limits, and adding automated cache cleanup.",
+    "ground_truth_team": "IT Support",
+    "ground_truth_category": "Software",
+    "urgency": 2,
+    "impact": 2,
+    "retrieved_context_ids": [
+      "INC00113",
+      "INC00272",
+      "INC00480",
+      "INC00152",
+      "INC00097"
+    ],
+    "retrieved_contexts": [
+      "PDF not loading for Merchant Agreement review. A Sales Agent reported being unable to access the fee configuration module in the application, hindering their ability to customize services for a new merchant.. Keywords: pdf, content-type, browser, cache, server, file, header, rendering\nAffected Component: Application Frontend\nResolution: The incident involved a Sales Agent's inability to access the fee configuration module within the application, which was hindering their ability to customize services for a new merchant. The root cause was determined to be an issue with the PDF rendering component within the application's frontend interface. The Sales Agent was attempting to review a PDF document containing the merchant agreement, but the PDF was not loading properly, which was preventing access to the underlying fee configuration module. The initial resolution involved guiding the Sales Agent to the correct location of the e-signature field within the PDF, which resolved the issue. To ensure a more comprehensive and lasting resolution, the following steps were taken: 1. The Sales Agent was instructed to clear their browser cache and cookies, as stale or corrupted cache files can sometimes interfere with PDF rendering. 2. A technical team member was dispatched to the Sales Agent's workstation to perform a more thorough diagnostic check. 3. The team used the browser's developer tools to inspect the network requests and response headers related to the PDF loading, which revealed that the PDF file was being served with an incorrect Content-Type header, leading to the browser not recognizing it as a PDF file. 4. The issue was resolved by updating the server-side configuration to ensure that PDF files are served with the correct Content-Type header (application/pdf). 5. Additionally, the team verified that the PDF file itself was not corrupted by using the 'file' command in the terminal to check the file type, which confirmed that the file was indeed a valid PDF. 6. Finally, the team ensured that the application's frontend was correctly handling PDF files by checking the client-side JavaScript code responsible for rendering PDFs, which was found to be functioning correctly.",
+      "Access permissions error for Merchant Agreement PDF. Merchants report that the content of the Merchant Agreement PDF appears distorted and unreadable when accessed for review and e-signature.. Keywords: pdf generation, font encoding, embedded fonts, pdffonts, library upgrade, font subset, pdf validation, server-side rendering\nAffected Component: Authentication Service\nResolution: The incident was resolved by identifying and resolving a backend validation issue that was causing the Merchant Agreement PDF to be rendered incorrectly. The root cause was traced to an incorrect PDF generation module that was not properly handling font encoding and embedded fonts, leading to distorted text and unreadable content. The following steps were taken to diagnose and resolve the issue: 1. The team first validated the PDF file on the server using the 'pdffonts' command to check for font encoding issues. The output indicated that the PDF was using a subset of fonts that were not properly embedded. 2. The team then checked the server-side code responsible for generating the PDF, which was using an outdated library that did not support proper font embedding. 3. The team upgraded the PDF generation library to the latest version, which included improved font handling and support for modern encoding standards. 4. After the upgrade, the team re-ran the PDF generation process and validated the output using the 'pdffonts' command again to confirm that the fonts were now properly embedded and the text was readable. 5. The team also performed a regression test by generating multiple PDFs with different font types and sizes to ensure that the issue was fully resolved. 6. Finally, the team implemented a monitoring system to log any font-related errors and alert the operations team if similar issues occurred in the future.",
+      "Unable to link new location to existing merchant ID. Merchants report that the content of the Merchant Agreement PDF appears distorted and unreadable when accessed for review and e-signature.. Keywords: pdf rendering, library versioning, data mapping, cache refresh, system reload, merchant data, sales ui, document generation\nAffected Component: Sales UI\nResolution: The incident was resolved through a multi-step diagnostic and remediation process. Initial investigation revealed that the PDF distortion issue was caused by a misconfiguration in the document rendering pipeline, specifically within the Sales UI component. The following steps were taken: 1. Performed a system cache refresh using the 'clear_cache.sh' script, which purges temporary files and reloads merchant data from the database. 2. Verified data mapping integrity by querying the 'merchant_data' table with the command 'SELECT * FROM merchant_data WHERE merchant_id = 'M12345';' to ensure proper field alignment. 3. Inspected the PDF generation process by reviewing logs from the 'pdf_renderer' service, which indicated a version mismatch between the PDF library (version 2.1.3) and the expected library (version 2.2.1). 4. Updated the PDF library using 'npm install pdf-lib@2.2.1' to align with the required version. 5. Conducted a full system reload with 'system_reload.sh' to ensure all components were synchronized. 6. Validated the fix by re-accessing the Sales UI and confirming that the PDF content was now displayed correctly without distortion. Additionally, a temporary workaround was implemented to prevent similar issues in the future by configuring the 'pdf_renderer' service to automatically refresh its library version during scheduled maintenance windows.",
+      "Merchant Agreement PDF displaying garbled text. An error occurs when a Sales Agent tries to save merchant data in the Sales UI, leading to incomplete information and hindered onboarding process.. Keywords: pdf generation, memory leak, configuration file, microservice, server allocation, service restart, network trace, log analysis\nAffected Component: PDF Generation Service\nResolution: The incident was resolved through a systematic diagnostic process. Initial troubleshooting began with verifying the sales UI application logs for any anomalies. The logs indicated a recurring error when saving merchant data, specifically a 'PDF Generation Error (Code: 503)' during the export phase. Further investigation revealed that the error was not originating from the frontend but was being propagated from the backend PDF generation service. A network trace using Wireshark showed intermittent connectivity issues between the Sales UI and the PDF generation microservice. The affected component was identified as the PDF Generation Service, which was running on an outdated server with insufficient memory allocation. A memory leak was confirmed via the 'top' command, which showed the service consuming over 90% of available RAM. The root cause was determined to be a corrupted configuration file in the '/var/opt/pdfgen/config.yaml' path, which was causing the service to fail during high-load scenarios. The corrupted configuration was replaced with a backed-up version, and the service was restarted. Additionally, the server's memory allocation was increased from 4GB to 8GB, and the service was configured to use a persistent volume for configuration storage. These changes restored the service's stability, allowing sales agents to save merchant data without encountering garbled text in the PDFs.",
+      "Merchant data not displaying in Sales UI. Merchants report that the content of the Merchant Agreement PDF appears distorted and unreadable when accessed for review and e-signature.. Keywords: pdf, rendering, browser, pdf.js, environment, server, checksum, document\nAffected Component: Document Management Service\nResolution: The incident was resolved by systematically addressing the root cause of the distorted Merchant Agreement PDF display in the Sales UI. Initial diagnostic steps included checking the server logs for the Sales UI application, which revealed intermittent errors related to PDF rendering. The team executed a series of troubleshooting steps: first, verifying the integrity of the PDF files stored in the Document Management Service (DMS) using checksum validation commands (sha256sum). Next, they inspected the browser console for client-side errors, which indicated potential issues with PDF.js rendering library versions. The team then checked the server-side configuration of the Sales UI, confirming that the PDF rendering module was not properly initialized due to a misconfigured environment variable (PDF_RENDERING_SERVICE_URL). After identifying the misconfiguration, the server was restarted to ensure the updated configuration took effect. Post-restart, the PDF rendering service was verified using curl commands to confirm connectivity and proper response headers. Additionally, the team implemented a temporary workaround by forcing the browser to reload the PDF content using JavaScript injection via the browser's developer tools. This multi-step approach ensured that the Sales Agents could resume onboarding without further issues, and the PDF content was displayed correctly without distortion."
+    ],
+    "retrieved_teams": [
+      "Network Ops",
+      "Network Ops",
+      "IT Support",
+      "IT Support",
+      "IT Support"
+    ],
+    "generated_answer": "Root Cause: The root cause is related to the PDF Generation Service's configuration and memory allocation, as seen in Incident 4 (INC00152), where a corrupted configuration file and insufficient memory caused service instability. The user's error of a 0-byte file and ENOSPC disk space may indicate similar underlying issues with the wkhtmltopdf service's ability to write files due to resource constraints.\nResolution: 1. Verify disk space on the server hosting the Merchant Management render service using `df -h` to confirm ENOSPC. 2. Free up disk space by removing unnecessary files or expanding storage capacity. 3. Check the wkhtmltopdf configuration file at `/var/opt/pdfgen/config.yaml` for corruption or misconfiguration, replacing it with a backed-up version if needed. 4. Restart the PDF Generation Service to apply changes. 5. Monitor memory usage with `top` to ensure the service has sufficient RAM (minimum 8GB as per Incident 4). 6. Validate PDF generation by attempting a download again and checking for errors in the service logs.",
+    "structured": {
+      "predicted_team": "Network Ops",
+      "predicted_priority": "1 - Critical",
+      "routing_justification": "The issue involves the PDF Generation Service (wkhtmltopdf) and disk space constraints, which directly relate to Network Ops' responsibility for backend services and infrastructure stability.",
+      "incident_attribution": [
+        {
+          "id": "INC00152",
+          "team": "IT Support",
+          "urgency": "3",
+          "impact": "2"
+        },
+        {
+          "id": "INC00480",
+          "team": "IT Support",
+          "urgency": "2",
+          "impact": "1"
+        },
+        {
+          "id": "INC00097",
+          "team": "IT Support",
+          "urgency": "2",
+          "impact": "1"
+        }
+      ]
+    },
+    "ragas_scores": {
+      "context_precision": 0.36666666664833336,
+      "context_recall": 0.0,
+      "faithfulness": 0.8,
+      "answer_relevancy": 0.6442572527525229
+    }
+  },
+  {
+    "index": 18,
+    "number": "TEST_INC019",
+    "query": "OAuth2 Token Scope Mismatch Blocking Mobile App Fee Calculator. Field sales agents using the mobile onboarding application receive '401 Unauthorized: Scope Insufficient' when invoking the /api/v2/pricing/calculate-fee endpoint after the latest app release.. OAuth2 token scope 401 Unauthorized Fee Calculation Keycloak API Gateway mobile app",
+    "ground_truth": "The root cause was a missing 'fees:calculate' scope in the Mobile Client OAuth2 App registration within Keycloak following the API gateway upgrade. Resolved by adding the required scopes to the mobile client definition in Keycloak and issuing a token refresh to active sessions.",
+    "ground_truth_team": "IT Support",
+    "ground_truth_category": "Access",
+    "urgency": 2,
+    "impact": 2,
+    "retrieved_context_ids": [
+      "INC00095",
+      "INC00089",
+      "INC00281",
+      "INC00432",
+      "INC00046"
+    ],
+    "retrieved_contexts": [
+      "Hardware compatibility issue with fee calculation module. A Sales Agent reported being unable to access the merchant equipment selection options within the Sales UI, hindering the configuration of new merchant accounts.. Keywords: session, authentication, session token, browser, cookies, api, onboarding portal, credentials\nAffected Component: Authentication Service\nResolution: The incident was resolved through a multi-step diagnostic and remediation process. The initial step involved verifying the Sales Agent's access credentials by checking the authentication logs in the Authentication Service. The logs indicated a successful login, but the user was unable to access the merchant equipment selection options within the Sales UI, suggesting a potential issue with session persistence or browser-specific restrictions. The IT Support team then performed a detailed analysis of the Sales UI session state by inspecting the browser's local storage and cookies using developer tools. They identified that the session token had expired due to a misconfiguration in the session timeout settings on the Authentication Service. To resolve this, the team executed the following commands: 'curl -X GET https://auth-service/api/session-status?merchant_id=12345' to check the session status and 'curl -X POST https://auth-service/api/session-refresh?merchant_id=12345' to refresh the session token. Additionally, the team reviewed the error logs from the Sales UI application server, which showed a '401 Unauthorized' error when attempting to access the merchant equipment selection options. This confirmed the session token was invalid. The team then reset the Sales Agent's access credentials through the onboarding portal's API by sending a POST request to 'https://onboarding-portal/api/reset-credentials?merchant_id=12345' with the new credentials. This action cleared the expired session and re-established a valid session token, allowing the Sales Agent to regain access to the merchant equipment selection options. The resolution ensured that the Sales Agent could continue with the onboarding process without further interruptions, and the team also implemented a temporary workaround to increase the session timeout duration to 30 minutes to prevent similar issues in the future.",
+      "API endpoint returning 500 error for merchant creation. New Sales Agent reported inability to configure fees/services due to access denial, hindering merchant onboarding process; Sales Agent affected.. Keywords: rbac, iam, api, authentication, crm, access control, permission, endpoint\nAffected Component: Authentication Service\nResolution: The incident was resolved by thoroughly investigating the access control configuration for the Sales Agent's role within the CRM system. Initial diagnostics involved checking the access logs for the API endpoint in question, which revealed unauthorized access attempts from the Sales Agent's account. Using the API monitoring tool 'Apigee', we identified that the Sales Agent's role lacked the necessary permissions to invoke the '/api/merchant/create' endpoint. Further analysis of the role-based access control (RBAC) configuration in the Identity and Access Management (IAM) system confirmed this misconfiguration. To resolve the issue, we re-assigned the required permissions to the Sales Agent's role through the IAM console, specifically granting 'merchant.create' and 'fee.configuration' permissions. Additionally, we performed a validation by simulating the Sales Agent's access using the 'curl' command with the appropriate authentication token, which successfully invoked the API endpoint without returning a 500 error. Post-resolution, we also implemented a monitoring check using Prometheus and Grafana to track access attempts and ensure the configuration remains stable. The Sales Agent was then re-notified and provided with updated access credentials to ensure seamless fee configuration and merchant onboarding.",
+      "Fee configuration tool malfunction in Sales UI. Upon configuring fees and services for a new location linked to an existing merchant ID, the Sales Agent noticed that the settings were missing or not applied. This led to discrepancies in the merchant agreement.. Keywords: session, authentication, token, cache, browser, log, config, error\nAffected Component: Authentication Service\nResolution: The incident was resolved by conducting a comprehensive diagnostic analysis of the Fee Configuration Tool within the Sales UI. The first step involved verifying the user's session and authentication status using the 'getSessionStatus' API endpoint, which confirmed the user had valid credentials. Next, we checked the browser's local storage and cookies for any potential data corruption or caching issues using browser developer tools (Chrome DevTools). We then executed the following commands to clear the browser cache and cookies: 'chrome://settings/clearBrowserData' and 'chrome://version'. Additionally, we examined the server-side logs for the Sales UI application, specifically focusing on the 'fee-configuration-service.log' file, which revealed a 401 Unauthorized error when attempting to save the fee configuration. This indicated an issue with the token validation process. To address this, we reviewed the token refresh mechanism and found that the token was expiring prematurely due to a misconfigured 'tokenTTL' parameter in the 'auth-service-config.json' file. We adjusted the 'tokenTTL' value from 10 minutes to 30 minutes and redeployed the configuration. Finally, we validated the fix by retesting the fee configuration process, ensuring that the settings were correctly applied and persisted in the backend database. The issue was resolved, and the merchant was able to proceed with the onboarding process without further discrepancies.",
+      "Access denied error when trying to submit merchant data. The Sales UI is not loading properly for a new Sales Agent attempting to onboard a merchant, causing delays in merchant data input.. Keywords: authentication, session, token, jwt, oauth, api, middleware, refresh token\nAffected Component: Authentication Service\nResolution: The issue was resolved through a systematic diagnostic process that identified the root cause of the access denied error during merchant data submission. Initial troubleshooting began with the Sales UI team analyzing server-side logs and client-side browser console outputs. The error logs indicated a 403 Forbidden status code when attempting to POST merchant data to the backend API endpoint. Further investigation revealed that the Sales Agent's session token was being invalidated prematurely due to a misconfigured session timeout in the Authentication Service. The session token was generated using JWT (JSON Web Token) with an expiration time of 10 minutes, but the Sales UI was not properly refreshing the token during long-running operations. To resolve this, the development team implemented an automatic token refresh mechanism using the OAuth 2.0 refresh token flow. Additionally, the backend API was updated to include a middleware layer that verifies the token's validity and handles token refresh requests. The fee calculation module was also adjusted to ensure it only executes after confirming the user's authentication status. The fix involved modifying the `/api/submit-merchant-data` endpoint to include a pre-validation step that checks for active sessions and refreshes the token if necessary. The Sales UI was updated to include a new JavaScript function that listens for session expiration events and triggers a silent token refresh via a background AJAX request. These changes were deployed during a scheduled maintenance window, and post-deployment testing confirmed that Sales Agents could now submit merchant data without encountering access denied errors.",
+      "Hardware compatibility issue with fee calculation module. During the data upload process for a new merchant, the API endpoint consistently returns a 500 error, preventing sales agents from successfully onboarding the merchant.. Keywords: api, font, pdf, compatibility, error, library, upgrade, data upload\nAffected Component: Payment Gateway\nResolution: The incident was resolved by thoroughly investigating the hardware compatibility issue affecting the fee calculation module during the data upload process. Initial diagnostics involved checking the API endpoint's health and performance using curl and Postman to reproduce the 500 Internal Server Error. Logs were analyzed from the application server, revealing that the error occurred during PDF generation for the fee calculation report, which was triggered by the data upload process. Further inspection of the PDF rendering module showed that the font rendering issue was not isolated to the PDF viewer plugin but was instead related to the underlying font library used by the system. The system was running an outdated version of the font library, which was incompatible with certain character sets used in the fee calculation data. To resolve this, the font library was upgraded to the latest version available in the organization's software repository. Additionally, a compatibility check was implemented to ensure that all font-related operations would use fallback fonts when the primary font was unavailable. The upgrade was performed during a maintenance window to minimize disruption, and after deployment, the API endpoint was tested with multiple data sets to confirm that the 500 error no longer occurred."
+    ],
+    "retrieved_teams": [
+      "IT Support",
+      "IT Support",
+      "IT Support",
+      "IT Support",
+      "IT Support"
+    ],
+    "generated_answer": "Root Cause: The OAuth2 token scope mismatch is likely due to insufficient permissions assigned to the mobile app's client in Keycloak, as seen in Incident 2 (INC00089) where a Sales Agent's role lacked the 'merchant.create' and 'fee.configuration' permissions, resulting in a 500 error. Similarly, Incident 4 (INC00432) showed session token validation failures due to misconfigured access controls, reinforcing the need for scope alignment.  \nResolution: 1. Verify the mobile app's client scope in Keycloak by checking the 'Scope' tab under the client configuration. 2. Ensure the 'fee.calculation' scope is explicitly assigned to the mobile app's client. 3. Regenerate the OAuth2 token for the mobile app using the updated scope. 4. Validate the fix by invoking the `/api/v2/pricing/calculate-fee` endpoint with the new token and confirming the 401 error resolves. 5. Monitor API Gateway logs for scope validation errors post-fix.",
+    "structured": {
+      "predicted_team": "IT Support",
+      "predicted_priority": "2 - High",
+      "routing_justification": "The issue involves OAuth2 token scope misconfiguration, which falls under access control and API endpoint validation, handled by IT Support in historical incidents.",
+      "incident_attribution": [
+        {
+          "id": "INC00089",
+          "team": "IT Support",
+          "urgency": "2",
+          "impact": "1"
+        },
+        {
+          "id": "INC00432",
+          "team": "IT Support",
+          "urgency": "1",
+          "impact": "3"
+        }
+      ]
+    },
+    "ragas_scores": {
+      "context_precision": 0.6388888888675925,
+      "context_recall": 1.0,
+      "faithfulness": 0.1111111111111111,
+      "answer_relevancy": 0.7729201817311511
+    }
+  },
+  {
+    "index": 19,
+    "number": "TEST_INC020",
+    "query": "Cannot change merchant bank account routing number in portal. Customer service rep reports that the input field for 'Bank Routing Transit Number (ABA)' is completely greyed out and uneditable for existing merchants requesting a bank detail update.. banking details routing number CRM field greyed out audit hold change request permission lock",
+    "ground_truth": "The root cause was a conditional UI field-lock triggered because the merchant record was in 'Audit Hold' status, requiring an approved Change Request workflow before inline banking edits are permitted. Resolved by guiding the representative to initiate the standard Change Request approval workflow.",
+    "ground_truth_team": "IT Support",
+    "ground_truth_category": "Software",
+    "urgency": 3,
+    "impact": 3,
+    "retrieved_context_ids": [
+      "INC00483",
+      "INC00214",
+      "INC00311",
+      "INC00459",
+      "INC00035"
+    ],
+    "retrieved_contexts": [
+      "Unable to add new location for existing merchant ID. Merchant data entered by Sales Agents in the Sales UI is not transferring to the Processing stage even after completion, halting the onboarding process for affected merchants.. Keywords: crm, rbac, api endpoint, access control, role-based permissions, sales ui, data transfer, processing stage\nAffected Component: CRM\nResolution: The incident was resolved by identifying and rectifying a misconfigured access control policy within the CRM system that was preventing the seamless transfer of merchant data from the Sales UI to the Processing stage. The root cause was determined through a combination of log analysis and system testing. The IT Support team first examined the Sales UI logs, which indicated a 403 Forbidden error when attempting to POST merchant data to the Processing API endpoint. Using the curl command, they validated the request and confirmed the error was due to insufficient permissions on the merchant data transfer API endpoint. The team then checked the role-based access control (RBAC) configuration in the CRM system and found that the 'Sales Agent' role lacked the necessary permissions to write to the Processing stage. To resolve this, the IT team adjusted the RBAC permissions by modifying the 'sales_agent' role in the CRM's access control policy manager, granting it write access to the Processing API endpoint. This change was implemented via the CRM's administrative console, and the system was reloaded to apply the changes. After the adjustment, the Sales UI was tested with a simulated merchant data entry, and the data was successfully transferred to the Processing stage without any access errors. The incident was fully resolved, and the affected merchants were able to proceed with their onboarding process.",
+      "Login credentials not working for merchant. Sales Agent encountered an error while trying to onboard an additional location for an existing merchant ID. The system failed to save the new location details.. Keywords: authentication, role, permissions, crm, acl, access control, role management\nAffected Component: Authentication Service\nResolution: The incident was resolved by systematically diagnosing the access issue related to the merchant's login credentials. Initial troubleshooting began with verifying the user's role permissions within the authentication service. Using the internal audit log tool, we checked the user's access rights and discovered that the Sales Agent's role lacked the necessary permissions to modify location details in the CRM system. To confirm, we executed a query on the authentication database to check the user's assigned roles and permissions. The query revealed that the 'Location Management' permission was missing from the agent's role. Additionally, we reviewed the system's access control list (ACL) to ensure there were no restrictive policies applied to the merchant's account. The resolution involved updating the agent's role to include the 'Location Management' permission. This was done through the role management interface in the authentication service, where we added the missing permission and saved the changes. After the update, the agent was able to successfully onboard the new location without encountering the previous error.",
+      "Merchant unable to e-sign agreement. Merchants encountered an access permission error while trying to upload and e-sign the Merchant Agreement PDF, preventing them from progressing to the processing stage and delaying onboarding completion.. Keywords: routing, traceroute, qos, load balancer, network performance, packet loss, core routers, portal\nAffected Component: Network Infrastructure\nResolution: The incident was diagnosed as a routing issue affecting the stability of the merchant portal's connectivity. The network team initiated a thorough analysis by first checking the routing tables on the core routers using the 'show ip route' command. They identified that the default route was misconfigured, leading to intermittent connectivity issues when merchants accessed the portal. The team then performed a traceroute from the merchant's end to the portal's backend servers using the 'traceroute -T <server_ip>' command, which revealed packet loss and routing loops between the merchant's network and the portal's load balancer. To resolve this, the network team reconfigured the routing tables on the core routers to use a more stable and direct path to the portal's backend servers. They also implemented Quality of Service (QoS) policies to prioritize traffic related to the merchant portal. Additionally, they monitored the network performance using tools like Wireshark and PRTG Network Monitor to ensure that the issue was fully resolved and that there were no recurring routing problems. The resolution was verified by testing the portal's accessibility from multiple merchant locations and confirming that the access permission error was no longer occurring.",
+      "Unable to link new location to existing merchant ID. Merchants intermittently experienced data loss while reviewing the merchant agreement, leading to frustration and delays in the onboarding process.. Keywords: network, load balancer, routing, tcp, latency, jmeter, packet loss\nAffected Component: Network Infrastructure\nResolution: The incident was resolved through a systematic investigation and optimization of the network infrastructure. The issue stemmed from intermittent data loss during the retrieval of merchant agreement PDFs, which was traced to a misconfigured load balancer and suboptimal routing rules. Network engineers began by analyzing the network latency using the `traceroute` command and observed increased latency between the merchant portal servers and the document storage service. They then checked the load balancer logs using `tcpdump` and identified sporadic TCP retransmissions due to packet loss on the 10.0.0.0/24 subnet. To address this, the routing table was updated to prioritize a redundant path through the 10.1.0.0/16 network, which was confirmed to have lower latency. Additionally, the load balancer was reconfigured to use a round-robin algorithm with health checks enabled, ensuring that only healthy endpoints received traffic. The issue was further validated by simulating high traffic using JMeter and observing stable performance. These changes ensured reliable data transmission, allowing merchants to access the agreement PDFs without timeouts or data loss.",
+      "Unable to link new location to existing merchant ID. A merchant is unable to log in to the Customer UI to review and e-sign the Merchant Agreement due to login credentials not being accepted.. Keywords: authentication, database, synchronization, replication, sync, merchant, whitelist, login\nAffected Component: Authentication Service\nResolution: The incident was caused by a data synchronization delay between the merchant database and the Customer UI authentication service, leading to an inability to validate login credentials for the new location. The root cause was identified through the following steps: 1) Checking the authentication service logs (located at /var/log/auth-service.log) which showed a 401 Unauthorized error when attempting to validate the merchant's credentials. 2) Running a database consistency check using the 'db_consistency_check.sh' script on the primary database server, which revealed a replication lag of 12 minutes between the primary and secondary nodes. 3) Analyzing the Customer UI logs (accessed via the ELK stack at http://logserver:9200) which indicated a 503 Service Unavailable error when attempting to fetch the merchant's profile data. 4) Verifying the synchronization status using the 'sync_status.sh' script, which confirmed that the secondary database was not receiving updates from the primary. The resolution involved manually triggering a database replication sync using the 'sync_force.sh' script, which successfully populated the missing merchant data in the Customer UI. Additionally, a temporary workaround was implemented by adding the new location's merchant ID to the authentication service's whitelist using the 'add_merchant_to_whitelist.sh' script, which allowed the merchant to log in and review the agreement. Finally, a permanent fix was scheduled for the next maintenance window to address the underlying replication lag issue by upgrading the database replication protocol to a more efficient version."
+    ],
+    "retrieved_teams": [
+      "IT Support",
+      "IT Support",
+      "IT Support",
+      "Network Ops",
+      "IT Support"
+    ],
+    "generated_answer": "Root Cause: INC00483 and INC00214 both highlight access control policy misconfigurations that lock fields based on role permissions. The CRM system's RBAC configuration (INC00483) and authentication service permissions (INC00214) were found to restrict edit access to critical fields when specific roles lack defined permissions. The \"greyed out\" state aligns with 403 Forbidden errors observed in INC00483, where insufficient permissions prevented data modification.\nResolution: 1) Verify the merchant's role in the CRM system using the access control policy manager to confirm permissions for editing bank details. 2) Check the authentication service's role-based permissions (INC00214) to ensure the 'Sales Agent' or 'Merchant Admin' role includes write access to financial data fields. 3) Temporarily whitelist the merchant's ID in the authentication service (as in INC00035) if permissions are correctly configured but the field remains locked. 4) Reload the CRM system to apply RBAC changes and test the field's editability via the Sales UI.",
+    "structured": {
+      "predicted_team": "IT Support",
+      "predicted_priority": "2 - High",
+      "routing_justification": "The issue involves access control and permission configuration, which are standard IT Support responsibilities for CRM and authentication systems.",
+      "incident_attribution": [
+        {
+          "id": "INC00483",
+          "team": "IT Support",
+          "urgency": "1",
+          "impact": "2"
+        },
+        {
+          "id": "INC00214",
+          "team": "IT Support",
+          "urgency": "1",
+          "impact": "1"
+        },
+        {
+          "id": "INC00035",
+          "team": "IT Support",
+          "urgency": "2",
+          "impact": "1"
+        }
+      ]
+    },
+    "ragas_scores": {
+      "context_precision": 0.0,
+      "context_recall": 0.0,
+      "faithfulness": 0.5555555555555556,
+      "answer_relevancy": 0.555641994854797
+    }
+  }
+]

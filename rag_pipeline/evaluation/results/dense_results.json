@@ -1,0 +1,67 @@
+[
+  {
+    "index": 0,
+    "number": "TEST_INC001",
+    "query": "BGP Route Flapping Causing Intermittent Packet Drops on Secondary WAN Link. Network monitoring alerted on frequent BGP state changes (Established to Active/Idle) on edge router rtr-core-dc2 connecting to ISP-2. Traffic across the secondary WAN circuit is dropping 28% of packets every 6-8 minutes, causing latency spikes in inter-DC replication.. BGP route flapping WAN packet loss MTU hold timer edge router replication latency",
+    "ground_truth": "The root cause was aggressive BGP hold-timer mismatch and MTU black-holing on the secondary ISP link. The issue was resolved by aligning the BGP keepalive/hold timers to 30s/90s on rtr-core-dc2, configuring path MTU discovery, and clamping TCP MSS to 1400 on the transit interface.",
+    "ground_truth_team": "Network Ops",
+    "ground_truth_category": "Network",
+    "retrieved_context_ids": [
+      "INC00231",
+      "INC00477",
+      "INC00398",
+      "INC00364",
+      "INC00392",
+      "INC00217",
+      "INC00371",
+      "INC00465"
+    ],
+    "retrieved_contexts": [
+      "Intermittent latency spikes affecting API response times. Sales Agent noticed that any changes made to fees/services configurations for a merchant are not saving properly in the system.. Keywords: api gateway, rate-limiting, circuit breaker, asynchronous processing, redis caching, prometheus, grafana, jmeter",
+      "Merchant data not transitioning to PROCESSING stage after e-signing. Intermittent network connectivity issues are disrupting the Merchant's ability to smoothly review the agreement on the Customer UI, causing delays and frustration.. Keywords: network latency, dns ttl, api endpoint, bgp routing, oauth 2.0, circuit breaker, session management, packet loss",
+      "Network connectivity issue preventing location addition. Intermittent latency spikes were observed, causing delays in API responses during merchant data input by Sales Agents. This variability in response times impacted the overall speed of onboarding operations.. Keywords: network latency, api connectivity, nic failure, qos configuration, packet loss, traceroute, mtr, network monitoring",
+      "Intermittent data loss in merchant review stage. Sales Agent encountered an error while trying to onboard an additional location for an existing merchant ID. The system failed to save the new location details.. Keywords: network switch, crc error, tcp connection, database backup, link flap, netflow, port statistics, data integrity",
+      "Duplicate merchant ID error when adding location. Sales Agent's device experienced a hardware failure during merchant onboarding, hindering the input of critical merchant information.. Keywords: network, routing, bgp, traceroute, netflow, packet loss, latency, router",
+      "Hardware failure on Sales Agent's device. An error in the system caused incorrect fees to be applied to a merchant's account, resulting in financial discrepancies and potential loss of trust.. Keywords: network, router, qos, bgp, iperf3, latency, packet loss",
+      "Intermittent network connectivity affecting agreement review. Sales Agent notices that the merchant data inputted is not displaying correctly in the Sales UI, hindering the completion of the onboarding process.. Keywords: network switch, crc error, link flap, traceroute, ping test, http request, network latency, data center",
+      "Login button unresponsive for Merchant. Intermittent latency spikes were observed, causing delays in API responses during merchant data input by Sales Agents. This variability in response times impacted the overall speed of onboarding operations.. Keywords: authentication, api gateway, rate limiting, redis, database query, latency, tcp retransmission, onboarding"
+    ],
+    "retrieved_teams": [
+      "IT Support",
+      "Network Ops",
+      "IT Support",
+      "IT Support",
+      "IT Support",
+      "Network Ops",
+      "IT Support",
+      "IT Support"
+    ],
+    "generated_answer": "Incident type: BGP Route Flapping causing Network Connectivity Issues. Affected systems: Secondary WAN link (ISP-2), edge router rtr-core-dc2, inter-DC replication processes.  \n\nRoot Causes:  \n- BGP hold timer mismatches (INC00392: routing misconfiguration causing packet loss)  \n- MTU hold timer issues (INC00217: BGP rerouting due to overloaded segments)  \n- ISP-side routing instability (INC00371: switch faults causing link flaps)  \n\nInvestigation Steps:  \n1. Check BGP neighbor configurations on rtr-core-dc2 using `show ip bgp neighbor` to verify hold timer mismatches.  \n2. Monitor BGP state transitions via `show ip bgp summary` to confirm Established→Active/Idle cycles.  \n3. Validate MTU settings on rtr-core-dc2's WAN interface using `ip mtu` and compare with ISP-2's MTU.  \n4. Analyze packet drops with Wireshark/tcpdump on rtr-core-dc2's WAN interface to identify dropped packets.  \n5. Review BGP route dampening settings via `show ip bgp dampening` to assess flapping mitigation.  \n6. Check ISP-2 logs for routing anomalies or MTU mismatches.  \n\nResolution:  \n1. Containment: Temporarily reroute traffic via primary WAN link using BGP route redistribution.  \n2. Fix: Adjust BGP hold timers on rtr-core-dc2 to match ISP-2, correct MTU settings, and apply BGP route dampening.  \n3. Long-term: Implement BGP Flap Suppression, monitor BGP states with Prometheus/Grafana, and validate ISP-2 MTU consistency.  \n\nPreventive Recommendations:  \n- Regular BGP configuration audits for hold timer and MTU alignment.  \n- Enable BGP route dampening to suppress flapping.  \n- Establish alerts for BGP state changes and MTU mismatches.  \n- Coordinate with ISP-2 to resolve underlying routing instability.",
+    "ragas_scores": {
+      "context_precision": 0.3333333333,
+      "context_recall": 1.0,
+      "faithfulness": 0.0,
+      "answer_relevancy": 0.6254493955827316
+    },
+    "triage_evaluation": {
+      "ground_truth_team": "Network Ops",
+      "predicted_team": "Network Ops",
+      "normalized_ground_truth_team": "Network Ops",
+      "normalized_predicted_team": "Network Ops",
+      "triage_match": true,
+      "predicted_priority": "2 - High",
+      "routing_justification": "BGP route flapping on a secondary WAN link directly impacts network connectivity and inter-DC replication, requiring Network Ops expertise to resolve routing instability.",
+      "retrieved_teams": [
+        "IT Support",
+        "Network Ops",
+        "IT Support",
+        "IT Support",
+        "IT Support",
+        "Network Ops",
+        "IT Support",
+        "IT Support"
+      ],
+      "retrieval_team_relevance_rate": 0.25
+    }
+  }
+]

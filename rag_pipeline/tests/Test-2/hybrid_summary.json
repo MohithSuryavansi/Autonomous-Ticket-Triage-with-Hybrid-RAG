@@ -1,0 +1,23 @@
+{
+  "mode": "hybrid",
+  "n_samples": 3,
+  "ragas_metrics": {
+    "context_precision": 1.0,
+    "context_recall": 0.6667,
+    "faithfulness": 0.1189,
+    "answer_relevancy": 0.8026
+  },
+  "triage_accuracy_analysis": {
+    "overall_triage_accuracy": 1.0,
+    "total_correct_triages": 3,
+    "total_test_samples": 3,
+    "mean_retrieval_team_relevance": 0.875,
+    "triage_accuracy_by_group": {
+      "Network Ops": {
+        "total_cases": 3,
+        "correct_triages": 3,
+        "accuracy": 1.0
+      }
+    }
+  }
+}

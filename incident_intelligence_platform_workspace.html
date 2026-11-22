@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AURA // Autonomous Incident Intelligence Workspace</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#EEF2FF',
+                            100: '#E0E7FF',
+                            500: '#6366F1',
+                            600: '#4F46E5',
+                            700: '#4338CA',
+                        },
+                        cyanBrand: {
+                            500: '#06B6D4',
+                            600: '#0891B2',
+                        }
+                    },
+                    animation: {
+                        'float-slow': 'float 12s ease-in-out infinite',
+                        'float-delayed': 'float 15s ease-in-out 3s infinite',
+                        'pulse-glow': 'pulseGlow 4s ease-in-out infinite',
+                        'shimmer': 'shimmer 2.5s linear infinite',
+                        'spin-slow': 'spin 8s linear infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translate(0px, 0px) scale(1)' },
+                            '50%': { transform: 'translate(30px, -20px) scale(1.05)' },
+                        },
+                        pulseGlow: {
+                            '0%, 100%': { opacity: '0.4' },
+                            '50%': { opacity: '0.7' },
+                        },
+                        shimmer: {
+                            '0%': { backgroundPosition: '-200% 0' },
+                            '100%': { backgroundPosition: '200% 0' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom scrollbar for subtle sleek look */
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.25);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(148, 163, 184, 0.45);
+        }
+
+        /* Glassmorphism primitives */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.68);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.03), 0 0 1px 1px rgba(255, 255, 255, 0.8) inset;
+        }
+
+        .glass-sidebar {
+            background: rgba(255, 255, 255, 0.55);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border-right: 1px solid rgba(226, 232, 240, 0.6);
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.02);
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .glass-card:hover {
+            background: rgba(255, 255, 255, 0.85);
+            border-color: rgba(99, 102, 241, 0.3);
+            box-shadow: 0 10px 30px -5px rgba(99, 102, 241, 0.08), 0 0 0 1px rgba(99, 102, 241, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .glass-input-box {
+            background: rgba(255, 255, 255, 0.82);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(203, 213, 225, 0.6);
+            box-shadow: 0 20px 50px -10px rgba(99, 102, 241, 0.07), inset 0 1px 2px rgba(255, 255, 255, 0.9);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .glass-input-box:focus-within {
+            background: rgba(255, 255, 255, 0.95);
+            border-color: rgba(99, 102, 241, 0.45);
+            box-shadow: 0 25px 60px -12px rgba(99, 102, 241, 0.18), 0 0 0 4px rgba(99, 102, 241, 0.08);
+        }
+
+        /* Flowy glassy glowing button */
+        .glass-flow-btn {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 50%, #06b6d4 100%);
+            background-size: 200% 200%;
+            animation: gradientMove 6s ease infinite;
+            box-shadow: 0 4px 18px rgba(99, 102, 241, 0.35);
+            transition: all 0.3s ease;
+        }
+
+        .glass-flow-btn:hover {
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.5), 0 0 15px rgba(6, 182, 212, 0.4);
+            transform: scale(1.03);
+        }
+
+        .glass-flow-btn:active {
+            transform: scale(0.97);
+        }
+
+        @keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Hero input position transition effect */
+        .hero-centered-layout {
+            transition: transform 0.65s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.45s ease;
+        }
+
+        /* Code block syntax mock styling */
+        pre code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.825rem;
+            line-height: 1.5;
+        }
+
+        /* Animated typing dots */
+        .typing-dot {
+            animation: typingAnimation 1.4s infinite ease-in-out both;
+        }
+        .typing-dot:nth-child(1) { animation-delay: 0s; }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typingAnimation {
+            0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="h-full bg-[#F8FAFC] text-slate-800 font-sans antialiased overflow-hidden selection:bg-indigo-100 selection:text-indigo-900">
+
+    <!-- Ambient Background Lighting & Soft Blurred Blobs -->
+    <div class="fixed inset-0 pointer-events-none overflow-hidden z-0">
+        <!-- Pale sky blue blob top-left -->
+        <div class="absolute -top-32 -left-32 w-[600px] h-[600px] rounded-full bg-gradient-to-br from-sky-200/50 via-blue-100/40 to-transparent blur-[120px] animate-float-slow"></div>
+        <!-- Light lavender blob top-right -->
+        <div class="absolute -top-20 -right-20 w-[650px] h-[650px] rounded-full bg-gradient-to-bl from-purple-200/45 via-indigo-100/35 to-transparent blur-[130px] animate-float-delayed"></div>
+        <!-- Soft emerald subtle touch bottom-center -->
+        <div class="absolute -bottom-40 left-1/3 w-[700px] h-[500px] rounded-full bg-radial from-slate-200/40 via-cyan-100/30 to-transparent blur-[140px]"></div>
+        <!-- Ambient grid texture -->
+        <div class="absolute inset-0 bg-[linear-gradient(to_right,#e2e8f00f_1px,transparent_1px),linear-gradient(to_bottom,#e2e8f00f_1px,transparent_1px)] bg-[size:4rem_4rem]"></div>
+    </div>
+
+    <!-- Main Workspace Frame -->
+    <div class="relative z-10 flex h-full w-full overflow-hidden">
+
+        <!-- LEFT SIDEBAR -->
+        <aside id="leftSidebar" class="glass-sidebar w-80 flex-shrink-0 flex flex-col h-full z-20 transition-all duration-300 ease-in-out">
+            <!-- Sidebar Header -->
+            <div class="p-4 border-b border-slate-200/50 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="h-9 w-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-cyan-400 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
+                        <i data-lucide="shield-alert" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-semibold text-slate-900 text-sm tracking-tight flex items-center gap-1.5">
+                            AURA <span class="px-1.5 py-0.5 text-[10px] font-mono uppercase bg-indigo-50 text-indigo-600 rounded-md border border-indigo-200/60 font-semibold">v3.4</span>
+                        </h1>
+                        <p class="text-[11px] text-slate-500 font-medium">Incident Intelligence AI</p>
+                    </div>
+                </div>
+                <button onclick="createNewChat()" class="p-2 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-white/80 transition-all" title="New Investigation">
+                    <i data-lucide="square-plus" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- New Chat CTA Button -->
+            <div class="px-4 pt-4 pb-2">
+                <button onclick="createNewChat()" class="w-full py-2.5 px-3.5 rounded-xl bg-white/80 border border-slate-200/80 hover:border-indigo-300 text-slate-700 hover:text-indigo-600 text-xs font-semibold flex items-center justify-center gap-2 shadow-sm hover:shadow-md hover:shadow-indigo-500/5 transition-all group">
+                    <i data-lucide="plus" class="w-4 h-4 text-indigo-500 group-hover:scale-110 transition-transform"></i>
+                    <span>Start New Triage Session</span>
+                    <span class="ml-auto font-mono text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">⌘N</span>
+                </button>
+            </div>
+
+            <!-- Search Conversations Input -->
+            <div class="px-4 py-2">
+                <div class="relative">
+                    <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <input type="text" id="sidebarSearch" placeholder="Search incidents, logs, tickets..." onkeyup="filterIncidents()" class="w-full pl-8 pr-3 py-1.5 bg-white/60 border border-slate-200/70 rounded-lg text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all">
+                </div>
+            </div>
+
+            <!-- Incidents / Threads List -->
+            <div class="flex-1 overflow-y-auto px-3 py-2 space-y-1.5" id="incidentHistoryList">
+                <div class="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Recent Investigations</div>
+                
+                <!-- History Items (Injected via JS or pre-rendered) -->
+                <!-- Item 1 (Active) -->
+                <div onclick="selectIncident('inc-1')" id="history-inc-1" class="incident-item glass-card p-3 rounded-xl cursor-pointer bg-white/80 border-indigo-200/80 shadow-sm relative overflow-hidden group">
+                    <div class="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500"></div>
+                    <div class="flex items-start justify-between gap-1 mb-1">
+                        <span class="text-xs font-semibold text-slate-800 line-clamp-1 group-hover:text-indigo-600 transition-colors">Postgres Connection Timeout</span>
+                        <span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-red-50 text-red-600 border border-red-200/60">P1</span>
+                    </div>
+                    <p class="text-[11px] text-slate-500 line-clamp-1 mb-2">PgBouncer pool exhausted on us-east-1a auth DB cluster</p>
+                    <div class="flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                        <span class="flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i> 12m ago</span>
+                        <span class="text-slate-500 font-sans">14 messages</span>
+                    </div>
+                </div>
+
+                <!-- Item 2 -->
+                <div onclick="selectIncident('inc-2')" id="history-inc-2" class="incident-item glass-card p-3 rounded-xl cursor-pointer hover:bg-white/70 relative group">
+                    <div class="flex items-start justify-between gap-1 mb-1">
+                        <span class="text-xs font-semibold text-slate-700 line-clamp-1 group-hover:text-indigo-600 transition-colors">K8s CrashLoopBackOff #482</span>
+                        <span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-amber-50 text-amber-600 border border-amber-200/60">P2</span>
+                    </div>
+                    <p class="text-[11px] text-slate-500 line-clamp-1 mb-2">OOMKilled pods in payment-gateway namespace</p>
+                    <div class="flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                        <span class="flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i> 2h ago</span>
+                        <span class="text-emerald-600 font-sans font-medium flex items-center gap-0.5"><i data-lucide="check-circle2" class="w-3 h-3"></i> Resolved</span>
+                    </div>
+                </div>
+
+                <!-- Item 3 -->
+                <div onclick="selectIncident('inc-3')" id="history-inc-3" class="incident-item glass-card p-3 rounded-xl cursor-pointer hover:bg-white/70 relative group">
+                    <div class="flex items-start justify-between gap-1 mb-1">
+                        <span class="text-xs font-semibold text-slate-700 line-clamp-1 group-hover:text-indigo-600 transition-colors">Kafka Consumer Lag Spike</span>
+                        <span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-amber-50 text-amber-600 border border-amber-200/60">P2</span>
+                    </div>
+                    <p class="text-[11px] text-slate-500 line-clamp-1 mb-2">Partition 4 lag exceeded 150k messages on telemetry topic</p>
+                    <div class="flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                        <span class="flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i> Yesterday</span>
+                        <span class="text-slate-500 font-sans">8 messages</span>
+                    </div>
+                </div>
+
+                <!-- Item 4 -->
+                <div onclick="selectIncident('inc-4')" id="history-inc-4" class="incident-item glass-card p-3 rounded-xl cursor-pointer hover:bg-white/70 relative group">
+                    <div class="flex items-start justify-between gap-1 mb-1">
+                        <span class="text-xs font-semibold text-slate-700 line-clamp-1 group-hover:text-indigo-600 transition-colors">Stripe Webhook 502 Errors</span>
+                        <span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-blue-50 text-blue-600 border border-blue-200/60">P3</span>
+                    </div>
+                    <p class="text-[11px] text-slate-500 line-clamp-1 mb-2">Ingress TLS handshake failures during cert rotation</p>
+                    <div class="flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                        <span class="flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i> Aug 17</span>
+                        <span class="text-emerald-600 font-sans font-medium flex items-center gap-0.5"><i data-lucide="check-circle2" class="w-3 h-3"></i> Resolved</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar Footer Status -->
+            <div class="p-3.5 border-t border-slate-200/50 bg-white/40">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2.5">
+                        <div class="relative">
+                            <div class="w-8 h-8 rounded-full bg-slate-200 border border-white flex items-center justify-center font-semibold text-xs text-slate-700 shadow-sm">
+                                JS
+                            </div>
+                            <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full"></span>
+                        </div>
+                        <div>
+                            <div class="text-xs font-semibold text-slate-800">SRE On-Call Lead</div>
+                            <div class="text-[10px] text-slate-500 font-mono">prod-us-east-1</div>
+                        </div>
+                    </div>
+                    <button class="p-1.5 rounded-lg hover:bg-slate-200/50 text-slate-400 hover:text-slate-600 transition-colors">
+                        <i data-lucide="settings" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- CENTER CHAT AREA WORKSPACE -->
+        <main class="flex-1 flex flex-col h-full relative overflow-hidden">
+
+            <!-- Top Glass Navigation Bar -->
+            <header class="h-14 border-b border-slate-200/50 glass-panel px-6 flex items-center justify-between z-10">
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleSidebar()" class="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors" title="Toggle Sidebar">
+                        <i data-lucide="panel-left" class="w-4 h-4"></i>
+                    </button>
+                    <div class="h-4 w-px bg-slate-200"></div>
+                    <div class="flex items-center gap-2">
+                        <span class="flex h-2 w-2 relative">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </span>
+                        <span class="text-xs font-medium text-slate-600">Telemetry Stream Active</span>
+                        <span class="text-[11px] font-mono text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200/60">3,420 eps</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <!-- Model / Agent Selector -->
+                    <div class="relative">
+                        <select id="agentSelector" class="appearance-none bg-white/80 border border-slate-200/80 rounded-xl px-3 py-1.5 pr-8 text-xs font-medium text-slate-700 hover:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer shadow-sm transition-all">
+                            <option value="triage-v3">🤖 Triage & Root-Cause Agent (v3.4)</option>
+                            <option value="remediation">⚡ Auto-Remediation Playbook Runner</option>
+                            <option value="sentry">🔍 Log Synthesizer & Error Clusterer</option>
+                        </select>
+                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+                    </div>
+
+                    <div class="h-4 w-px bg-slate-200"></div>
+
+                    <!-- Right Panel Toggle Button -->
+                    <button onclick="toggleRightPanel()" id="rightPanelToggleBtn" class="flex items-center gap-1.5 py-1.5 px-3 rounded-xl bg-white/70 hover:bg-white border border-slate-200/80 text-xs font-semibold text-slate-700 hover:text-indigo-600 shadow-sm transition-all" title="Toggle Incident Dossier">
+                        <i data-lucide="layout-sidebar-right" class="w-4 h-4 text-indigo-500"></i>
+                        <span>Incident Intelligence Dossier</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Main Content Container with Hero State & Active Message Feed -->
+            <div class="flex-1 relative overflow-hidden flex flex-col justify-between">
+
+                <!-- Scrollable Messages Container (Initially Hidden until first prompt) -->
+                <div id="messagesScrollArea" class="hidden flex-1 overflow-y-auto px-6 py-6 space-y-6 max-w-4xl mx-auto w-full">
+                    <!-- Messages will be dynamically rendered here -->
+                </div>
+
+                <!-- INITIAL HERO STATE (Centered Empty Workspace) -->
+                <div id="heroState" class="hero-centered-layout absolute inset-0 flex flex-col items-center justify-center px-4 max-w-3xl mx-auto text-center pointer-events-auto my-auto z-0">
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50/80 border border-indigo-200/60 text-indigo-700 text-xs font-medium mb-6 backdrop-blur-md shadow-sm">
+                        <i data-lucide="sparkles" class="w-3.5 h-3.5 text-indigo-500 animate-spin-slow"></i>
+                        <span>Autonomous Ticket Triaging Engine v3.4</span>
+                    </div>
+
+                    <h2 class="text-4xl sm:text-5xl font-bold tracking-tight text-slate-900 mb-3">
+                        Hi, Engineer.
+                    </h2>
+                    <p class="text-lg text-slate-500 font-normal mb-8 max-w-md">
+                        Ready whenever you are. Describe an anomaly, upload a stack trace, or select an active alert.
+                    </p>
+
+                    <!-- Quick Prompt Chips -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full mb-8 text-left">
+                        <button onclick="useQuickPrompt('Triage P1 PostgreSQL Connection Timeout on us-east-1 DB cluster')" class="glass-card p-3.5 rounded-2xl border border-slate-200/70 hover:border-indigo-300 flex items-start gap-3 group text-left transition-all">
+                            <div class="p-2 rounded-xl bg-red-50 text-red-600 border border-red-100 group-hover:scale-105 transition-transform">
+                                <i data-lucide="database-zap" class="w-4 h-4"></i>
+                            </div>
+                            <div>
+                                <div class="text-xs font-semibold text-slate-800 group-hover:text-indigo-600 transition-colors flex items-center gap-1.5">
+                                    <span>[P1 Alert] Postgres Pool Timeout</span>
+                                    <span class="text-[10px] font-mono text-red-500 font-semibold">CRITICAL</span>
+                                </div>
+                                <div class="text-[11px] text-slate-500 line-clamp-1 mt-0.5">Diagnose PgBouncer queue latency & transaction locks</div>
+                            </div>
+                        </button>
+
+                        <button onclick="useQuickPrompt('Investigate Kubernetes CrashLoopBackOff in payment-gateway service')" class="glass-card p-3.5 rounded-2xl border border-slate-200/70 hover:border-indigo-300 flex items-start gap-3 group text-left transition-all">
+                            <div class="p-2 rounded-xl bg-amber-50 text-amber-600 border border-amber-100 group-hover:scale-105 transition-transform">
+                                <i data-lucide="box" class="w-4 h-4"></i>
+                            </div>
+                            <div>
+                                <div class="text-xs font-semibold text-slate-800 group-hover:text-indigo-600 transition-colors flex items-center gap-1.5">
+                                    <span>[P2] K8s Pod CrashLoopBackOff</span>
+                                    <span class="text-[10px] font-mono text-amber-600 font-semibold">HIGH</span>
+                                </div>
+                                <div class="text-[11px] text-slate-500 line-clamp-1 mt-0.5">Analyze pod OOMKilled events and recent commit diffs</div>
+                            </div>
+                        </button>
+
+                        <button onclick="useQuickPrompt('Summarize Stripe Webhook 502 Bad Gateway failures from Sentry logs')" class="glass-card p-3.5 rounded-2xl border border-slate-200/70 hover:border-indigo-300 flex items-start gap-3 group text-left transition-all">
+                            <div class="p-2 rounded-xl bg-sky-50 text-sky-600 border border-sky-100 group-hover:scale-105 transition-transform">
+                                <i data-lucide="activity" class="w-4 h-4"></i>
+                            </div>
+                            <div>
+                                <div class="text-xs font-semibold text-slate-800 group-hover:text-indigo-600 transition-colors flex items-center gap-1.5">
+                                    <span>Synthesize Stripe 502 Outage</span>
+                                    <span class="text-[10px] font-mono text-sky-600 font-semibold">SENTRY</span>
+                                </div>
+                                <div class="text-[11px] text-slate-500 line-clamp-1 mt-0.5">Correlate TLS handshake errors with cert rotations</div>
+                            </div>
+                        </button>
+
+                        <button onclick="useQuickPrompt('Run dry-run auto-remediation on Kafka topic lag anomaly')" class="glass-card p-3.5 rounded-2xl border border-slate-200/70 hover:border-indigo-300 flex items-start gap-3 group text-left transition-all">
+                            <div class="p-2 rounded-xl bg-purple-50 text-purple-600 border border-purple-100 group-hover:scale-105 transition-transform">
+                                <i data-lucide="cpu" class="w-4 h-4"></i>
+                            </div>
+                            <div>
+                                <div class="text-xs font-semibold text-slate-800 group-hover:text-indigo-600 transition-colors flex items-center gap-1.5">
+                                    <span>Auto-Scale Kafka Consumers</span>
+                                    <span class="text-[10px] font-mono text-purple-600 font-semibold">PLAYBOOK</span>
+                                </div>
+                                <div class="text-[11px] text-slate-500 line-clamp-1 mt-0.5">Simulate consumer replica expansion & partition rebalance</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- FLOATING INPUT CONTAINER (Transitions smooth from hero center to bottom on first send) -->
+                <div id="inputBoxWrapper" class="w-full max-w-3xl mx-auto px-4 pb-6 pt-2 z-20 transition-all duration-700 ease-in-out">
+                    <form id="chatForm" onsubmit="handleFormSubmit(event)" class="glass-input-box p-2.5 rounded-3xl relative flex flex-col gap-2">
+                        
+                        <!-- Text Input area -->
+                        <textarea id="userInput" rows="2" placeholder="Describe an incident, issue, or paste log telemetry... (Press Enter to send)" 
+                            onkeydown="handleKeyDown(event)"
+                            class="w-full bg-transparent px-3 py-1.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none resize-none font-sans leading-relaxed"></textarea>
+
+                        <!-- Input Controls & Actions bar -->
+                        <div class="flex items-center justify-between pt-1 border-t border-slate-200/40 px-2">
+                            <div class="flex items-center gap-1.5">
+                                <!-- Attachment button -->
+                                <button type="button" onclick="triggerFileUpload()" class="p-2 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-slate-100/70 transition-colors" title="Attach Logs / Metrics File">
+                                    <i data-lucide="paperclip" class="w-4 h-4"></i>
+                                </button>
+                                <!-- Voice query button -->
+                                <button type="button" onclick="toggleVoiceInput()" id="voiceBtn" class="p-2 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-slate-100/70 transition-colors" title="Voice Input">
+                                    <i data-lucide="mic" class="w-4 h-4"></i>
+                                </button>
+                                <!-- Code snippet snippet -->
+                                <button type="button" onclick="insertCodeBlock()" class="p-2 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-slate-100/70 transition-colors" title="Paste Stacktrace Code">
+                                    <i data-lucide="code-2" class="w-4 h-4"></i>
+                                </button>
+                                <span class="h-3.5 w-px bg-slate-200 mx-1"></span>
+                                <span class="text-[11px] text-slate-400 font-mono hidden sm:inline">Grounding: Datadog • PagerDuty • Sentry</span>
+                            </div>
+
+                            <!-- Flowy Glassy Send Button -->
+                            <button type="submit" id="sendBtn" class="glass-flow-btn px-4 py-2 rounded-2xl text-white font-medium text-xs flex items-center gap-2 group">
+                                <span>Analyze Query</span>
+                                <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-0.5 transition-transform"></i>
+                            </button>
+                        </div>
+                    </form>
+                    <div class="flex items-center justify-between text-[11px] text-slate-400 px-4 mt-2">
+                        <span>AURA AI can directly execute approved terraform & K8s runbooks</span>
+                        <span class="font-mono">Use Shift + Enter for newline</span>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+
+        <!-- RIGHT SIDE PANEL: Incident Intelligence Dossier -->
+        <aside id="rightPanel" class="glass-sidebar w-96 flex-shrink-0 flex flex-col h-full border-l border-slate-200/60 z-20 transition-all duration-300 ease-in-out">
+            <!-- Dossier Header -->
+            <div class="p-4 border-b border-slate-200/50 flex items-center justify-between bg-white/40">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="file-search" class="w-4 h-4 text-indigo-600"></i>
+                    <h3 class="font-semibold text-slate-800 text-xs tracking-wide uppercase">Incident Dossier</h3>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <span id="incidentStatusBadge" class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-red-100 text-red-700 border border-red-200">
+                        INVESTIGATING
+                    </span>
+                    <button onclick="toggleRightPanel()" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dossier Content Scroll -->
+            <div class="flex-1 overflow-y-auto p-4 space-y-5">
+
+                <!-- Incident ID & Confidence Score Header Card -->
+                <div class="glass-card p-4 rounded-2xl border border-slate-200/80 bg-white/70">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-mono font-semibold text-slate-500" id="dossierIncId">INC-9042</span>
+                        <span class="text-[10px] text-slate-400 font-mono">Correlated 1.2s ago</span>
+                    </div>
+                    <h4 class="text-sm font-bold text-slate-900 leading-snug mb-3" id="dossierIncTitle">
+                        PostgreSQL Connection Pool Exhaustion on us-east-1a
+                    </h4>
+
+                    <!-- AI Confidence Progress Bar -->
+                    <div class="bg-slate-100 p-2.5 rounded-xl border border-slate-200/50">
+                        <div class="flex items-center justify-between text-xs font-semibold mb-1.5">
+                            <span class="text-slate-600 flex items-center gap-1">
+                                <i data-lucide="brain-circuit" class="w-3.5 h-3.5 text-indigo-500"></i>
+                                Root Cause Certainty
+                            </span>
+                            <span class="text-indigo-600 font-mono" id="dossierConfidenceScore">96.8%</span>
+                        </div>
+                        <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                            <div id="confidenceBar" class="h-full bg-gradient-to-r from-indigo-500 to-cyan-500 rounded-full transition-all duration-1000" style="width: 96.8%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Classification Specs Grid -->
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div class="glass-card p-3 rounded-xl bg-white/60">
+                        <div class="text-[10px] uppercase font-semibold text-slate-400 mb-1">Severity Tier</div>
+                        <div class="font-bold text-red-600 flex items-center gap-1">
+                            <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
+                            <span>P1 - CRITICAL</span>
+                        </div>
+                    </div>
+                    <div class="glass-card p-3 rounded-xl bg-white/60">
+                        <div class="text-[10px] uppercase font-semibold text-slate-400 mb-1">Blast Radius</div>
+                        <div class="font-bold text-slate-800">14,200 Users</div>
+                    </div>
+                </div>
+
+                <!-- Impacted Infrastructure Topology -->
+                <div class="space-y-2">
+                    <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Affected Microservices</div>
+                    <div class="space-y-1.5">
+                        <div class="flex items-center justify-between p-2.5 rounded-xl bg-white/60 border border-slate-200/60 text-xs">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                                <span class="font-mono font-medium text-slate-800">auth-db-primary</span>
+                            </div>
+                            <span class="text-[10px] font-mono text-red-600 font-semibold bg-red-50 px-1.5 py-0.5 rounded">POOLED MAX</span>
+                        </div>
+                        <div class="flex items-center justify-between p-2.5 rounded-xl bg-white/60 border border-slate-200/60 text-xs">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                                <span class="font-mono font-medium text-slate-800">api-gateway-v2</span>
+                            </div>
+                            <span class="text-[10px] font-mono text-amber-600 font-semibold bg-amber-50 px-1.5 py-0.5 rounded">504 HIGH</span>
+                        </div>
+                        <div class="flex items-center justify-between p-2.5 rounded-xl bg-white/60 border border-slate-200/60 text-xs">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                <span class="font-mono font-medium text-slate-800">checkout-service</span>
+                            </div>
+                            <span class="text-[10px] font-mono text-emerald-600 font-semibold bg-emerald-50 px-1.5 py-0.5 rounded">NORMAL</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grounding Sources & Telemetry Logs -->
+                <div class="space-y-2">
+                    <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Telemetry Evidence</div>
+                    <div class="space-y-2 text-xs">
+                        <div class="p-3 rounded-xl bg-slate-900 text-slate-200 font-mono text-[11px] space-y-1">
+                            <div class="text-slate-400 text-[10px] flex justify-between">
+                                <span>DATADOG APM LOG</span>
+                                <span>12:24:02.192</span>
+                            </div>
+                            <div class="text-red-400 line-clamp-2">
+                                [FATAL] PgBouncer: ERROR: client connection count 500 exceeds max pool limit.
+                            </div>
+                        </div>
+
+                        <div class="p-2.5 rounded-xl bg-white/80 border border-slate-200/70 flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="git-commit" class="w-4 h-4 text-indigo-500"></i>
+                                <div>
+                                    <div class="font-medium text-slate-800">Commit #c89f2a1</div>
+                                    <div class="text-[10px] text-slate-400">auth-service: fix user token caching</div>
+                                </div>
+                            </div>
+                            <span class="text-[10px] text-slate-500 font-mono">18m ago</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- One-Click Remediation Playbook -->
+                <div class="p-4 rounded-2xl bg-gradient-to-br from-indigo-50/90 to-cyan-50/90 border border-indigo-200/80 space-y-3">
+                    <div class="flex items-center gap-2 text-indigo-900 font-semibold text-xs">
+                        <i data-lucide="zap" class="w-4 h-4 text-indigo-600"></i>
+                        <span>Automated Mitigation Playbook</span>
+                    </div>
+
+                    <p class="text-[11px] text-slate-600 leading-normal">
+                        AURA has constructed a safe 2-step remediation sequence to resolve connection starvation.
+                    </p>
+
+                    <div class="space-y-2">
+                        <button onclick="executeAction('scale-pg')" class="w-full py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center justify-between shadow-sm transition-all">
+                            <span class="flex items-center gap-1.5"><i data-lucide="sliders" class="w-3.5 h-3.5"></i> Scale PgBouncer Pool (200 → 500)</span>
+                            <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                        </button>
+                        <button onclick="executeAction('rollback-commit')" class="w-full py-2 px-3 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold flex items-center justify-between transition-all">
+                            <span class="flex items-center gap-1.5"><i data-lucide="rotate-ccw" class="w-3.5 h-3.5 text-amber-500"></i> Canary Rollback to v2.13.9</span>
+                            <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </aside>
+
+    </div>
+
+    <!-- Hidden file input for attachment testing -->
+    <input type="file" id="fileUploadInput" class="hidden" onchange="handleFileSelected(event)">
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // Global state variables
+        let isFirstMessageSent = false;
+        let isLeftSidebarOpen = true;
+        let isRightPanelOpen = true;
+
+        // Initialize Lucide icons on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            // Start smooth mouse tilt / parallax effect
+            initParallax();
+        });
+
+        // Mouse Parallax effect for ambient background
+        function initParallax() {
+            document.addEventListener('mousemove', (e) => {
+                const x = (e.clientX / window.innerWidth - 0.5) * 20;
+                const y = (e.clientY / window.innerHeight - 0.5) * 20;
+                const bgBlobs = document.querySelectorAll('.animate-float-slow, .animate-float-delayed');
+                bgBlobs.forEach((blob, idx) => {
+                    const factor = (idx + 1) * 0.4;
+                    blob.style.transform = `translate(${x * factor}px, ${y * factor}px)`;
+                });
+            });
+        }
+
+        // Quick prompt click handler
+        function useQuickPrompt(text) {
+            const input = document.getElementById('userInput');
+            input.value = text;
+            input.focus();
+            // Trigger form submission
+            handleFormSubmit(new Event('submit'));
+        }
+
+        function handleKeyDown(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleFormSubmit(e);
+            }
+        }
+
+        // Form Submission Logic: Sinks Hero and switches workspace to active chat mode
+        function handleFormSubmit(e) {
+            if (e) e.preventDefault();
+            const input = document.getElementById('userInput');
+            const userText = input.value.trim();
+
+            if (!userText) return;
+
+            input.value = '';
+
+            // 1. Transition layout if first message
+            if (!isFirstMessageSent) {
+                transitionToActiveChatState();
+                isFirstMessageSent = true;
+            }
+
+            // 2. Render User Message bubble
+            appendUserMessage(userText);
+
+            // 3. Render AI Thinking / Loading indicator
+            const loadingMsgId = appendThinkingIndicator();
+
+            // Scroll to bottom
+            scrollToBottom();
+
+            // 4. Simulate AI Triage Processing (or call Gemini API if user wants)
+            setTimeout(() => {
+                // Update thinking text dynamically before finalizing
+                updateThinkingStep(loadingMsgId, "Correlating telemetry metrics with Github commits...");
+                
+                setTimeout(() => {
+                    updateThinkingStep(loadingMsgId, "Synthesizing root cause & playbook actions...");
+                    
+                    setTimeout(() => {
+                        // Remove loading indicator and replace with rich AI response
+                        removeMessage(loadingMsgId);
+                        appendAIResponse(userText);
+                        scrollToBottom();
+                        lucide.createIcons();
+                    }, 1000);
+                }, 1000);
+            }, 800);
+        }
+
+        // Smooth visual transition when sending the first prompt
+        function transitionToActiveChatState() {
+            const heroState = document.getElementById('heroState');
+            const messagesArea = document.getElementById('messagesScrollArea');
+            const inputBoxWrapper = document.getElementById('inputBoxWrapper');
+
+            // Fade out and shrink hero greeting
+            heroState.style.transform = 'translateY(-40px) scale(0.95)';
+            heroState.style.opacity = '0';
+            heroState.style.pointerEvents = 'none';
+
+            setTimeout(() => {
+                heroState.classList.add('hidden');
+                messagesArea.classList.remove('hidden');
+            }, 400);
+
+            // SINK Animation: Smoothly slide input box to sticky bottom layout
+            inputBoxWrapper.style.transform = 'translateY(0px)';
+        }
+
+        // Append User Message UI
+        function appendUserMessage(text) {
+            const messagesArea = document.getElementById('messagesScrollArea');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = "flex items-start justify-end gap-3 mb-6 animate-fade-in";
+            msgDiv.innerHTML = `
+                <div class="max-w-xl glass-card bg-indigo-600 text-white p-4 rounded-2xl rounded-tr-sm shadow-md shadow-indigo-500/10 border border-indigo-500">
+                    <p class="text-sm leading-relaxed font-sans">${escapeHtml(text)}</p>
+                    <div class="mt-1 text-[10px] text-indigo-200 text-right font-mono">${getCurrentTime()}</div>
+                </div>
+                <div class="w-8 h-8 rounded-full bg-indigo-100 border border-indigo-300 text-indigo-800 font-semibold text-xs flex items-center justify-center flex-shrink-0">
+                    SRE
+                </div>
+            `;
+            messagesArea.appendChild(msgDiv);
+        }
+
+        // Append AI Thinking / Agent Telemetry Retrieval Indicator
+        function appendThinkingIndicator() {
+            const messagesArea = document.getElementById('messagesScrollArea');
+            const loadingId = 'loading-' + Date.now();
+            const msgDiv = document.createElement('div');
+            msgDiv.id = loadingId;
+            msgDiv.className = "flex items-start gap-3 mb-6";
+            msgDiv.innerHTML = `
+                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 to-cyan-500 text-white flex items-center justify-center flex-shrink-0 shadow-md shadow-indigo-500/20">
+                    <i data-lucide="bot" class="w-4 h-4 animate-pulse"></i>
+                </div>
+                <div class="glass-card p-4 rounded-2xl rounded-tl-sm border border-slate-200/80 max-w-lg bg-white/80">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
+                            AURA Incident Intelligence
+                        </span>
+                        <span class="text-[10px] font-mono text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">Analysing</span>
+                    </div>
+                    
+                    <div class="flex items-center gap-3 text-xs text-slate-600 font-mono py-1">
+                        <div class="flex space-x-1">
+                            <div class="w-2 h-2 bg-indigo-500 rounded-full typing-dot"></div>
+                            <div class="w-2 h-2 bg-indigo-500 rounded-full typing-dot"></div>
+                            <div class="w-2 h-2 bg-indigo-500 rounded-full typing-dot"></div>
+                        </div>
+                        <span id="${loadingId}-text" class="text-slate-500">Querying Datadog & PgBouncer telemetry...</span>
+                    </div>
+                </div>
+            `;
+            messagesArea.appendChild(msgDiv);
+            lucide.createIcons();
+            return loadingId;
+        }
+
+        function updateThinkingStep(loadingId, stepText) {
+            const textEl = document.getElementById(`${loadingId}-text`);
+            if (textEl) {
+                textEl.innerText = stepText;
+            }
+        }
+
+        function removeMessage(msgId) {
+            const el = document.getElementById(msgId);
+            if (el) el.remove();
+        }
+
+        // Render rich AI incident diagnosis response
+        function appendAIResponse(userQuery) {
+            const messagesArea = document.getElementById('messagesScrollArea');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = "flex items-start gap-3 mb-6 animate-fade-in";
+            
+            // Structured response HTML
+            msgDiv.innerHTML = `
+                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 to-cyan-500 text-white flex items-center justify-center flex-shrink-0 shadow-md shadow-indigo-500/20">
+                    <i data-lucide="sparkles" class="w-4 h-4"></i>
+                </div>
+                <div class="space-y-4 max-w-2xl w-full">
+                    
+                    <!-- Main Diagnosis Glass Card -->
+                    <div class="glass-card p-5 rounded-2xl rounded-tl-sm border border-slate-200/90 bg-white/85 shadow-sm space-y-4">
+                        <div class="flex items-center justify-between border-b border-slate-200/50 pb-3">
+                            <div class="flex items-center gap-2">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-red-100 text-red-700 border border-red-200">P1 CRITICAL</span>
+                                <h3 class="text-xs font-bold text-slate-800">Root Cause Identified</h3>
+                            </div>
+                            <span class="text-[10px] font-mono text-slate-400">INC-9042 • 96.8% Confidence</span>
+                        </div>
+
+                        <p class="text-xs text-slate-700 leading-relaxed">
+                            Based on real-time correlation between <strong>Datadog APM metrics</strong> and recent GitHub deployment commits, the primary cause of connection starvation is unclosed DB connection handles introduced in API release <code class="bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded font-mono text-[11px] border">v2.14.0</code>.
+                        </p>
+
+                        <!-- Telemetry Log Snippet -->
+                        <div class="p-3 rounded-xl bg-slate-900 text-slate-100 font-mono text-xs overflow-x-auto border border-slate-800">
+                            <div class="text-[10px] text-slate-400 border-b border-slate-800 pb-1 mb-2 flex justify-between">
+                                <span>auth-db-primary.us-east-1a</span>
+                                <span>PgBouncer Metric</span>
+                            </div>
+                            <span class="text-red-400">[ERROR]</span> pool_size=200 active_clients=200 waiting_clients=342
+                            <br><span class="text-amber-300">[WARN]</span> db_transaction_timeout exceed on /verify-token (duration: 12.4s)
+                        </div>
+
+                        <!-- Key Action Items Checklist -->
+                        <div class="space-y-2 pt-1">
+                            <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Recommended Action Sequence</div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                                <div class="p-2.5 rounded-xl bg-indigo-50/60 border border-indigo-100 flex items-center gap-2">
+                                    <i data-lucide="check-circle" class="w-4 h-4 text-indigo-600"></i>
+                                    <span class="text-slate-800 font-medium">1. Expand PgBouncer Limit</span>
+                                </div>
+                                <div class="p-2.5 rounded-xl bg-indigo-50/60 border border-indigo-100 flex items-center gap-2">
+                                    <i data-lucide="circle" class="w-4 h-4 text-slate-400"></i>
+                                    <span class="text-slate-700 font-medium">2. Rollback to Commit #b71f30</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Bar inside response -->
+                        <div class="flex items-center justify-between pt-3 border-t border-slate-200/50">
+                            <div class="flex items-center gap-2">
+                                <button onclick="executeAction('scale-pg')" class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all">
+                                    <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                                    <span>Execute Auto-Fix</span>
+                                </button>
+                                <button onclick="copyResponseText(this)" class="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-medium transition-colors">
+                                    <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </div>
+                            <div class="flex items-center gap-1 text-slate-400 text-xs">
+                                <button class="p-1 hover:text-slate-600"><i data-lucide="thumbs-up" class="w-3.5 h-3.5"></i></button>
+                                <button class="p-1 hover:text-slate-600"><i data-lucide="thumbs-down" class="w-3.5 h-3.5"></i></button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            `;
+
+            messagesArea.appendChild(msgDiv);
+        }
+
+        // Helper Functions
+        function scrollToBottom() {
+            const messagesArea = document.getElementById('messagesScrollArea');
+            messagesArea.scrollTop = messagesArea.scrollHeight;
+        }
+
+        function getCurrentTime() {
+            const now = new Date();
+            return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+        }
+
+        function createNewChat() {
+            // Reset to empty state
+            const heroState = document.getElementById('heroState');
+            const messagesArea = document.getElementById('messagesScrollArea');
+            const inputBoxWrapper = document.getElementById('inputBoxWrapper');
+
+            messagesArea.innerHTML = '';
+            messagesArea.classList.add('hidden');
+            
+            heroState.classList.remove('hidden');
+            heroState.style.opacity = '1';
+            heroState.style.transform = 'translateY(0px) scale(1)';
+            heroState.style.pointerEvents = 'auto';
+
+            isFirstMessageSent = false;
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('leftSidebar');
+            isLeftSidebarOpen = !isLeftSidebarOpen;
+            if (isLeftSidebarOpen) {
+                sidebar.classList.remove('-ml-80');
+            } else {
+                sidebar.classList.add('-ml-80');
+            }
+        }
+
+        function toggleRightPanel() {
+            const rightPanel = document.getElementById('rightPanel');
+            isRightPanelOpen = !isRightPanelOpen;
+            if (isRightPanelOpen) {
+                rightPanel.classList.remove('-mr-96');
+            } else {
+                rightPanel.classList.add('-mr-96');
+            }
+        }
+
+        function filterIncidents() {
+            const query = document.getElementById('sidebarSearch').value.toLowerCase();
+            const items = document.querySelectorAll('.incident-item');
+            items.forEach(item => {
+                const text = item.innerText.toLowerCase();
+                if (text.includes(query)) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+
+        function selectIncident(id) {
+            // Highlight selected item
+            document.querySelectorAll('.incident-item').forEach(item => {
+                item.classList.remove('border-indigo-200/80', 'bg-white/80', 'shadow-sm');
+            });
+            const selected = document.getElementById(`history-${id}`);
+            if (selected) {
+                selected.classList.add('border-indigo-200/80', 'bg-white/80', 'shadow-sm');
+            }
+        }
+
+        function executeAction(actionType) {
+            const toast = document.createElement('div');
+            toast.className = "fixed bottom-6 right-6 glass-card bg-slate-900 text-white p-4 rounded-2xl shadow-2xl border border-slate-700 z-50 flex items-center gap-3 animate-bounce";
+            toast.innerHTML = `
+                <i data-lucide="check-circle2" class="w-5 h-5 text-emerald-400"></i>
+                <div>
+                    <div class="text-xs font-bold">Action Executed Successfully</div>
+                    <div class="text-[10px] text-slate-300 font-mono">Runbook ${actionType} triggered on Terraform</div>
+                </div>
+            `;
+            document.body.appendChild(toast);
+            lucide.createIcons();
+            setTimeout(() => toast.remove(), 4000);
+        }
+
+        function triggerFileUpload() {
+            document.getElementById('fileUploadInput').click();
+        }
+
+        function handleFileSelected(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const input = document.getElementById('userInput');
+                input.value += `\n[Attached Telemetry Log File: ${file.name}]`;
+            }
+        }
+
+        function toggleVoiceInput() {
+            const btn = document.getElementById('voiceBtn');
+            btn.classList.toggle('text-red-500');
+            btn.classList.toggle('animate-pulse');
+        }
+
+        function insertCodeBlock() {
+            const input = document.getElementById('userInput');
+            input.value += "\n```log\n[ERROR] 504 Gateway Timeout\n```\n";
+            input.focus();
+        }
+
+        function copyResponseText(btn) {
+            const icon = btn.querySelector('i');
+            btn.classList.add('bg-emerald-100', 'text-emerald-700');
+            setTimeout(() => {
+                btn.classList.remove('bg-emerald-100', 'text-emerald-700');
+            }, 2000);
+        }
+    </script>
+</body>
+</html>

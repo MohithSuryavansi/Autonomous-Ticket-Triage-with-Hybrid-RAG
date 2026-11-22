@@ -1,0 +1,27 @@
+# Python
+venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ChromaDB & BM25 index (generated artifacts — rebuild from ingest.py)
+chroma_data/
+bm25_index.pkl
+
+# Environment files
+.env
+backend/.env
+
+# Node (frontend only — backend is now Python)
+frontend/node_modules/
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
